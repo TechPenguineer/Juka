@@ -1,5 +1,8 @@
 ﻿using System.Text;
+using JukaCompiler.Expressions;
 using JukaCompiler.Interpreter;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 
 namespace JukaCompiler.SystemCalls
 {
@@ -7,6 +10,7 @@ namespace JukaCompiler.SystemCalls
     {
         GetAvailableMemory,
         FileOpen,
+        CSharp
     }
 
     /// <summary>
@@ -24,9 +28,10 @@ namespace JukaCompiler.SystemCalls
 
     internal class JukaSystemCalls : IJukaCallable
     {
-        public static readonly Dictionary<string, Type> kv = new Dictionary<string, Type>()
+        public static readonly Dictionary<string, Type> kv = new()
         {
             {"FileOpen", typeof(IFileOpen)},
+            {"CSharp", typeof(ICSharp)},
         };
 
         public int Arity()
@@ -38,8 +43,8 @@ namespace JukaCompiler.SystemCalls
         {
             if(JukaSystemCalls.kv.TryGetValue(methodName, out var theType))
             { 
-                var jukacall = (IJukaCallable)interpreter.ServiceProvider.GetService(theType);
-                return jukacall.Call(methodName, interpreter, arguments);
+                var jukacall = (IJukaCallable)interpreter.ServiceProvider.GetService(theType)!;
+                return jukacall?.Call(methodName, interpreter, arguments);
             }
 
             throw new Exception("");
@@ -59,10 +64,10 @@ namespace JukaCompiler.SystemCalls
             { 
                 foreach(var argument in arguments)
                 {
-                    if (argument is Parse.Expression.LexemeTypeLiteral)
+                    if (argument is Expr.LexemeTypeLiteral literal)
                     {
-                        byte[] bytes = File.ReadAllBytes( ((Parse.Expression.LexemeTypeLiteral)argument).literal.ToString());
-                        Console.Out.WriteLine(((Parse.Expression.LexemeTypeLiteral)argument));
+                        byte[] bytes = File.ReadAllBytes( literal.literal?.ToString() ?? string.Empty);
+                        Console.Out.WriteLine(literal);
                         return bytes;
                     }
                 }
@@ -72,7 +77,52 @@ namespace JukaCompiler.SystemCalls
                 throw new SystemCallException(ex);
             }
 
-            return new byte[0];
+            return Array.Empty<byte>();
+        }
+    }
+
+    internal class CSharp : ICSharp, IJukaCallable
+    {
+        public int Arity()
+        {
+            return 1;
+        }
+
+        public object? Call(string methodName, JukaInterpreter interpreter, List<object?> arguments)
+        {
+            try
+            {
+                foreach (var argument in arguments)
+                {
+                    if (argument is Expr.LexemeTypeLiteral literal)
+                    {
+                        var csharp = literal.literal?.ToString() ?? string.Empty;
+
+                        string result = "";
+                        try
+                        {
+                            var task = CSharpScript.EvaluateAsync(csharp, ScriptOptions.Default.WithImports(new List<string> { "System.IO", "System.Math" }));
+                            var taskCompleted = task.GetAwaiter();
+                            if (taskCompleted.GetResult() != null)
+                            {
+                                result = taskCompleted.GetResult().ToString() ?? "";
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            result = string.Empty;
+                        }
+
+                        return  result;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new SystemCallException(ex);
+            }
+
+            return "";
         }
     }
 }

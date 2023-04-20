@@ -5,8 +5,10 @@ using JukaCompiler.Statements;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using JukaCompiler.Exceptions;
+using JukaCompiler.Expressions;
 using JukaCompiler.SystemCalls;
 using JukaCompiler.Lexer;
+using System;
 
 
 namespace JukaCompiler
@@ -17,7 +19,7 @@ namespace JukaCompiler
      */
     public class Compiler
     {
-        private ServiceProvider serviceProvider;
+        private ServiceProvider? serviceProvider = null;
 
         public Compiler()
         {
@@ -32,6 +34,7 @@ namespace JukaCompiler
                 services.AddSingleton<ICompilerError,CompilerError>();
                 services.AddSingleton<IJukaCallable, JukaSystemCalls>();
                 services.AddSingleton<IFileOpen, FileOpen>();
+                services.AddSingleton<ICSharp, CSharp>();
                 services.AddSingleton<ISystemClock, SystemClock>();
                 services.AddSingleton<IGetAvailableMemory, GetAvailableMemory>();
                 this.serviceProvider = services.BuildServiceProvider();
@@ -40,16 +43,20 @@ namespace JukaCompiler
         }
 
         // Run the Compiler (Step: 3)
-        public string Go(String data, bool isFile = true)
+        public string Go(String data, bool isFile = true, int debug = 0)
         {
             try
             {
-                this.serviceProvider.GetRequiredService<ICompilerError>().SourceFileName(data);
+                var provider = this.serviceProvider;
+                if (provider != null)
+                {
+                    provider.GetRequiredService<ICompilerError>().SourceFileName(data);
 
-                Parser parser = new(new Scanner(data, this.serviceProvider, isFile), this.serviceProvider);
-                List<Stmt> statements = parser.Parse();
+                    Parser parser = new(new Scanner(data, provider, isFile), provider);
+                    List<Stmt> statements = parser.Parse();
 
-                return Compile(statements);
+                    return Compile(statements);
+                }
             }
             catch (Exception ex)
             {
@@ -61,25 +68,34 @@ namespace JukaCompiler
 
         private string Compile(List<Stmt> statements)
         {
-            var interpreter = new Interpreter.JukaInterpreter(serviceProvider);
-            Resolver? resolver = new(interpreter);
-            resolver.Resolve(statements);
-
-            SetupMainMethodRuntimeHook(statements, resolver);
-
-            var currentOut = Console.Out;
-
-
-            using (StringWriter stringWriter = new StringWriter())
+            if (serviceProvider != null)
             {
-                Console.SetOut(stringWriter);
-                interpreter.Interpret(statements);
+                var interpreter = new JukaInterpreter(serviceProvider);
+                Resolver? resolver = new(interpreter);
+                resolver.Resolve(statements);
 
-                String ConsoleOutput = stringWriter.ToString();
-                Console.SetOut(currentOut);
+                SetupMainMethodRuntimeHook(statements, resolver);
 
-                return ConsoleOutput;
+                var currentOut = Console.Out;
+
+                try
+                {
+                    using StringWriter stringWriter = new();
+                    Console.SetOut(stringWriter);
+                    interpreter.Interpret(statements);
+
+                    string consoleOutput = stringWriter.ToString();
+                    Console.SetOut(currentOut);
+                    return consoleOutput;
+                }
+                catch (Exception e)
+                {
+                    Console.SetOut(currentOut);
+                    return e.ToString();
+                }
             }
+
+            throw new JRuntimeException("Service provider is not created");
         }
 
         private static void SetupMainMethodRuntimeHook(List<Stmt> statements, Resolver resolver)
@@ -97,25 +113,32 @@ namespace JukaCompiler
                     continue;
                 }
 
-                throw new Exception("No main function defined");
+                throw new Exception("No main function is defined");
             }
 
-            Lexeme? lexeme = new(LexemeType.IDENTIFIER, 0, 0);
+            Lexeme lexeme = new(LexemeType.Types.IDENTIFIER, 0, 0);
             lexeme.AddToken("main");
-            Expression.Variable functionName = new(lexeme);
-            Expression.Call call = new(functionName, false, new List<Expression>());
+            Expr.Variable functionName = new(lexeme);
+            Expr.Call call = new(functionName, false, new List<Expr>());
             Stmt.Expression expression = new(call);
             resolver.Resolve(new List<Stmt>() { expression });
         }
 
         public bool HasErrors()
         {
-            return this.serviceProvider.GetRequiredService<ICompilerError>().HasErrors();
+            var provider = this.serviceProvider;
+            return provider != null && provider.GetRequiredService<ICompilerError>().HasErrors();
         }
 
         public List<String> ListErrors()
         {
-            return this.serviceProvider.GetRequiredService<ICompilerError>().ListErrors();
+            var provider = this.serviceProvider;
+            if (provider != null)
+            {
+                return provider.GetRequiredService<ICompilerError>().ListErrors();
+            }
+
+            throw new JRuntimeException("unable to initialize provider for errors");
         }
 
     }

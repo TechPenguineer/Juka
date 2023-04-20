@@ -2,13 +2,23 @@
 
 ## Supported Versions
 
+| Version    | Supported          |
+| ---------- | ------------------ |
+| latest | :white_check_mark: |
+| < latest  | :x:                |
 
-| Version | Supported          |
-| ------- | ------------------ |
-| >= 0.0.199   | :white_check_mark: |
-| < 0.0.199   | :x:                |
+### Reporting a Vulnerability
 
-## Reporting a Vulnerability
+Please open an issue for any vulnerability found.
 
-Report a vulnerability by going to https://github.com/jukaLang/Juka/issues and creating an "issue"
-Going to Discord (https://discord.gg/MsKWsErzfp) and posting an issue.
+Report a vulnerability by going to
+<https://github.com/jukaLang/Juka/issues>
+ and creating an "issue".
+
+Alternatively,
+Go to Discord
+(<https://discord.gg/MsKWsErzfp>)
+and post an issue.
+
+We do not guarantee any fixes.
+We try to make updates on a daily basis.

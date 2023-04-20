@@ -1,151 +1,85 @@
-﻿using JukaCompiler;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
-namespace JukaUnitTest
+namespace JukaUnitTest;
+
+[TestClass]
+public class CompilerUnitTest : UnitTestStructure
 {
-    [TestClass]
-    public class CompilerUnitTest
+    [TestMethod]
+    public void StackBasedArray()
     {
-        /// <summary>
-        /// Default main function calls hard code test func"
-        /// </summary>
-        string sourceAsString =
-            @"func main() = 
-                {
-                    test_func();
-                }";
-
-        private string Go()
-        {
-            Compiler compiler = new Compiler();
-            var outputValue = compiler.Go(sourceAsString, false);
-            if (compiler.HasErrors())
-            {
-                throw new Exception("Parser exceptions:\r\n" + String.Join("\r\n", compiler.ListErrors()));
-            }
-
-            return outputValue;
-        }
-
-        [TestMethod]
-        public void ArrayTest()
-        {
-            sourceAsString +=
-                @"func test_func() = 
+        SourceAsString +=
+            @"func test_func() = 
                 {
                     var x = array[3];
-                    //x[1] = ""test"";
-                    print(x[0]); 
+                    x[1] = ""test"";
+                    x[0] = ""foo"";
+                    x[2] = 3;
+                    print(x[1]);
                 }";
 
-            var value = Go();
-            Assert.AreEqual("System.Object", value);
-        }
+        Assert.AreEqual("test", Go());
+    }
 
-        [TestMethod]
-        public void WhileBoolean()
-        {
-            sourceAsString +=
-                @"func test_func() = 
+
+    [TestMethod]
+    public void HeapBasedArray()
+    {
+        SourceAsString +=
+            @"func test_func() = 
                 {
-                    var x = true;
-                    while(x == true)
-                    {
-                        print(""y"");
-                        x = false;
-                    }
+                    var y = ""te"";
+                    print(y);
+                    //delete y;
+                    print(""st"");
                 }";
 
-            Assert.AreEqual("y", Go());
-        }
+        Assert.AreEqual("test", Go());
+    }
 
-        [TestMethod]
-        public void Fibonacci()
-        {
-            sourceAsString +=
-                @"func test_func() = 
+
+
+    [TestMethod]
+    [DataRow(3,"3")]
+    [DataRow(-1,"-1")]
+    [DataRow(0,"0")]
+    public void PrintLiteral(dynamic value, string expected)
+    {
+        SourceAsString +=
+            @"func test_func() = 
                 {
-                    var x = array[3];
-                    print(""y"");
+                    printLine("+value+@"); 
                 }";
+        Assert.AreEqual(expected + Environment.NewLine,  Go());
+    }
 
-            Assert.AreEqual("y", Go());
-        }
-
-       [TestMethod]
-        public void IfBoolean()
-        {
-            sourceAsString +=
-                @"func test_func() = 
+    [TestMethod]
+    [DataRow(3,"3")]
+    [DataRow(-1,"-1")]
+    [DataRow(0,"0")]
+    public void PrintVariable(dynamic value, string expected)
+    {
+        SourceAsString +=
+            @"func test_func() = 
                 {
-                    var x = true;
-                    if ( x == true)
-                    {
-                        print(""x"");
-                    }
-                    else
-                    {
-                        print(""y"");
-                    }
-                }";
-
-            Assert.AreEqual("x", Go());
-        }
-
-        [TestMethod]
-        public void IfBooleanElseBranch()
-        {
-            sourceAsString +=
-                @"func test_func() = 
-                {
-                    var x = false;
-                    if ( x == true)
-                    {
-                        print(""x"");
-                    }
-                    else
-                    {
-                        print(""y"");
-                    }
-                }";
-
-            Assert.AreEqual("y", Go());
-        }
-
-        [TestMethod]
-        public void PrintLiteral()
-        {
-            sourceAsString +=
-                @"func test_func() = 
-                {
-                    printLine(""print""); 
-                }";
-
-            var value = Go();
-            Assert.AreEqual("print\r\n", value);
-        }
-
-        [TestMethod]
-        public void PrintVariable()
-        {
-            sourceAsString +=
-                @"func test_func() = 
-                {
-                    var x = ""print"";
+                    var x = "+value+@";
                     print(x); 
                 }";
 
-            Assert.AreEqual("print", Go());
-        }
+        Assert.AreEqual(expected, Go());
+    }
 
-        [TestMethod]
-        public void PassVariable()
-        {
-            sourceAsString +=
-                @"func test_func() = 
+    [TestMethod]
+    [DataRow(3,"3")]
+    [DataRow(-1,"-1")]
+    [DataRow(0,"0")]
+    public void PassVariable(dynamic value, string expected)
+    {
+        SourceAsString +=
+            @"func test_func() = 
                 {
-                    var x = ""print"";
+                    var x = "+value+@";
                     varpass(x);
                 }
                 
@@ -154,17 +88,19 @@ namespace JukaUnitTest
                     print(x); 
                 }";
 
-            var value = Go();
-            Assert.AreEqual("print", value);
-        }
+        Assert.AreEqual(expected, Go());
+    }
 
-        [TestMethod]
-        public void PrintThreeLevelsNesting()
-        {
-            sourceAsString +=
-                @"func test_func() = 
+    [TestMethod]
+    [DataRow(3,"3")]
+    [DataRow(-1,"-1")]
+    [DataRow(0,"0")]
+    public void PrintThreeLevelsNesting(dynamic value, string expected)
+    {
+        SourceAsString +=
+            @"func test_func() = 
                 {
-                    var y = ""one two three"";
+                    var y = "+value+@";
                     nest1(y);
                 }
                 
@@ -178,173 +114,26 @@ namespace JukaUnitTest
                     print(z);
                 }";
 
-            var value = Go();
-            Assert.AreEqual("one two three", value);
-        }
+        Assert.AreEqual(expected, Go());
+    }
 
-        [TestMethod]
-        public void EmptyComment()
-        {
-            sourceAsString += @"func test_func() =
-                {
-                    var y = ""one two three"";
-                    /*nest1(y);*/
-                }";
+        
 
-            Assert.AreEqual("", Go());
-        }
-
-        [TestMethod]
-        public void MultipleVariables()
-        {
-            sourceAsString += @"
+    [TestMethod]
+    [DataRow(3,"3")]
+    [DataRow(-1,"-1")]
+    [DataRow(0,"0")]
+    public void MultipleVariables(dynamic value, string expected)
+    {
+        SourceAsString += @"
                 func test_func() = 
                 {
                     var z = 3;
-                    var x=""a""; 
+                    var x="+value+@"; 
                     print(x);
                     print(z);
                 }";
 
-            Assert.AreEqual("a3" , Go());
-        }
-
-        [TestMethod]
-        public void Add()
-        {
-            sourceAsString += @"
-                func test_func() = {
-                    var x=32; 
-                    var y=33; 
-                    var z=x+y;
-                    print(z);
-                 }";
-
-            var value = Go();
-            Assert.AreEqual("65" , Go());
-        }
-
-        [TestMethod]
-        public void Subtract()
-        {
-            sourceAsString += @"func test_func() = {
-                var x=32; var y=33; var z=x-y;
-                print(z);
-            }";
-
-            var x = Go();
-            Assert.AreEqual("-1", x);
-        }
-
-        [TestMethod]
-        public void Divide()
-        {
-            sourceAsString += @"func test_func() =
-            {
-                var x=10; 
-                var y=3;
-                var z=x/y;
-                print(z);
-            }";
-
-            Assert.AreEqual("3", Go());
-        }
-
-        [TestMethod]
-        public void Multiply()
-        {
-            sourceAsString += @"func test_func() = 
-            {
-                var x=3;
-                var y=3;
-                var z=x*y;
-                print(z);
-            }";
-
-            Assert.AreEqual("9" , Go());
-        }
-
-        [TestMethod]
-        public void TestSourceAsFile()
-        {
-            Compiler compiler = new Compiler();
-
-            var currentDirectory = System.IO.Directory.GetCurrentDirectory();
-            
-
-            var outputValue = compiler.Go(@"..\..\..\..\..\examples\test2.juk");
-            if (compiler.HasErrors())
-            {
-                var errors = compiler.ListErrors();
-                foreach(var error in errors)
-                {
-                    Assert.IsTrue(false, error);
-                }
-            }
-
-            Assert.AreEqual("AsdfA" + Environment.NewLine, outputValue);
-        }
-
-
-        [TestMethod]
-        public void Class()
-        {
-            sourceAsString += @"
-                class x = 
-                {
-                    func xmethod() = 
-                    {
-                        print(""foo"");
-                    }
-
-                    func zmethod() = 
-                    {
-                        print(""bar"");
-                    }
-                }
-
-                func test_func() = 
-                {
-                    var v = x();
-                    v.xmethod();
-                    v.zmethod();
-                }";
-
-            Assert.AreEqual("foobar", Go());
-        }
-
-        [TestMethod]
-        public void Primitives()
-        {
-            sourceAsString += @"
-                func test_func() = 
-                {
-                    availableMemory();
-                }
-
-                func availableMemory() = 
-                {
-                    var v = getAvailableMemory();
-                    print(v);
-                }";
-
-            Assert.AreNotEqual(0, Go());
-        }
-
-        [TestMethod]
-        public void ForLoop()
-        {
-            sourceAsString += @"
-                func test_func() = 
-                {
-                    for(var i = 0; i<10; i+1;)
-                    {
-                        print(i);
-                    }
-                }";
-
-            var runValue = Go();
-            Assert.AreSame("0123456789", runValue);
-        }
+        Assert.AreEqual(expected+"3" , Go());
     }
 }

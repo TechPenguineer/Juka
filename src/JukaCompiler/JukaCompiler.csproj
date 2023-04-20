@@ -1,24 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>true</IsPackable>
-    <PackageVersion>$(PackageVersion)</PackageVersion>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+	<OutputType>Library</OutputType>
+	<TargetFramework>net7.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<IsPackable>true</IsPackable>
+	<PackageVersion>$(PackageVersion)</PackageVersion>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	  <Description>Juka Programming Language Compiler</Description>
+	  <RepositoryUrl>https://github.com/jukaLang/juka</RepositoryUrl>
+	  <PackageProjectUrl>https://jukalang.com</PackageProjectUrl>
+	  <PackageIcon>logo.png</PackageIcon>
+	  <Copyright>Juka 2022</Copyright>
+	  <RepositoryTpe>git</RepositoryTpe>
+	  <Authors>JukaLang</Authors>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.2.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <Compile Remove="Constants\**" />
+    <EmbeddedResource Remove="Constants\**" />
+    <None Remove="Constants\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Constants\" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.5.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.5.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\logo.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

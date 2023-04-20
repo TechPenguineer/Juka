@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>36cc20c2-1dc1-4852-9051-c9a223ffd7a9</UserSecretsId>
@@ -10,18 +10,19 @@
     <PackageVersion>$(PackageVersion)</PackageVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>true</PublishTrimmed>
-    <PublishAot>true</PublishAot>
-    <ApplicationIcon>..\juka.ico</ApplicationIcon>
+    <PublishAot>false</PublishAot>
+    <ApplicationIcon>..\jukaapi.ico</ApplicationIcon>
     <DebugType>None</DebugType>
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\juka.ico" />
+    <Content Include="..\jukaapi.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
   <ItemGroup>
