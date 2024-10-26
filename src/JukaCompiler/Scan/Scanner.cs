@@ -6,12 +6,6 @@ using static System.Char;
 
 namespace JukaCompiler.Scan
 {
-/// <summary>
-/// This code snippet defines an internal class Scanner that scans a given input string or file data character by character to 
-/// identify different types of lexemes like identifiers, numbers, strings, and symbols. It maintains lexeme type dictionaries for keywords, 
-/// internal functions, and handles various symbols and their respective lexeme types. 
-/// Additionally, it tracks line and column numbers and raises errors for unexpected characters.
-/// </summary>
     internal class Scanner
     {
         private int start = 0;
@@ -19,16 +13,15 @@ namespace JukaCompiler.Scan
         private int line = 1;
         private int column = 0;
         private byte[] fileData;
-        private List<Lexeme?> lexemes = [];
+        private readonly List<Lexeme?> lexemes = new();
         private ICompilerError compilerError;
 
-        private static Dictionary<string, LexemeType.Types> keywordsDictionary = new()
+        private static readonly Dictionary<string, LexemeType.Types> keywordsDictionary = new()
         {
             { "and",    LexemeType.Types.AND },
             { "class",  LexemeType.Types.CLASS },
             { "else",   LexemeType.Types.ELSE },
             { "func",   LexemeType.Types.FUNC },
-            { "sub",    LexemeType.Types.SUB },
             { "for",    LexemeType.Types.FOR },
             { "if",     LexemeType.Types.IF },
             { "null",   LexemeType.Types.NULL },
@@ -49,30 +42,25 @@ namespace JukaCompiler.Scan
             { "delete", LexemeType.Types.DELETE}
         };
 
-        private static Dictionary<string, LexemeType.Types> internalFunctionsList = new()
+        private static readonly Dictionary<string, LexemeType.Types> internalFunctionsList = new()
         {
-            {"print",    LexemeType.Types.PRINT},
-            {"printLine",LexemeType.Types.PRINTLINE}
+            {"print", LexemeType.Types.PRINT},
+            {"printLine", LexemeType.Types.PRINTLINE}
         };
 
-        // Initializes a new instance of the Scanner class with the provided data, service provider, and optional isFile flag.
-        // 
-        // Parameters:
-        //   data: The input data to be scanned.
-        //   serviceProvider: The service provider for the scanner.
-        //   isFile: A flag indicating whether the data is a file path. Default is true.
-        internal Scanner(string data, ServiceProvider serviceProvider, bool isFile = true)
+        internal Scanner(string data, IServiceProvider serviceProvider, bool isFile = true)
         {
+            this.compilerError = serviceProvider.GetRequiredService<ICompilerError>();
             if (isFile)
             {
                 if (string.IsNullOrEmpty(data))
                 {
-                    throw new ArgumentNullException("The path is null: " + data);
+                    throw new ArgumentNullException("The path is null");
                 }
 
                 if (!File.Exists(data))
                 {
-                    throw new FileLoadException("Unable to find file: " + data);
+                    throw new FileLoadException("Unable to find file " + data);
                 }
 
                 fileData = File.ReadAllBytes(data);
@@ -82,11 +70,9 @@ namespace JukaCompiler.Scan
             fileData = Encoding.ASCII.GetBytes(data);
         }
 
-        // Scans the input data character by character until the end of the file is reached. It updates the 'start' variable before 
-        // calling the 'ReadToken' method. Finally, it returns a list of lexemes.
         internal List<Lexeme?> Scan()
         {
-            while (!IsEndOfFile())
+            while (!IsEof())
             {
                 start = current;
                 ReadToken();
@@ -95,24 +81,20 @@ namespace JukaCompiler.Scan
             return lexemes;
         }
 
-        private bool IsEndOfFile()
+        internal bool IsEof()
         {
-            return current == fileData.Length;
+            if (current == fileData.Length)
+            {
+                return true;
+            }
+
+            return false;
         }
 
-        private bool IsNumberChar(char c)
-        {
-            return char.IsDigit(c) || c == '.';
-        }
-
-        // Reads a single character and identifies its type, such as identifiers, numbers, or symbols. 
-        // This function advances the column count, then based on the character type, calls corresponding functions like Identifier(), Number(), AddSymbol(), or String(). 
-        // It handles various cases for different symbols using a switch statement, such as parentheses, braces, commas, dots, operators, and comments. 
-        // This function also checks for whitespace after processing the character.
 
         internal void ReadToken()
         {
-            column++;
+            this.column++;
             char t = Advance();
 
 
@@ -130,55 +112,56 @@ namespace JukaCompiler.Scan
 
             if (IsPunctuation(t) || IsSymbol(t))
             {
-                switch(t)
+                switch (t)
                 {
                     case '(':
-                    {
-                        AddSymbol( t, LexemeType.Types.LEFT_PAREN);
-                        break;
-                    }
-                    case ')': AddSymbol( t, LexemeType.Types.RIGHT_PAREN); break;
-                    case '{': AddSymbol( t, LexemeType.Types.LEFT_BRACE); break;
-                    case '}': AddSymbol( t, LexemeType.Types.RIGHT_BRACE); break;
-                    case ',': AddSymbol( t, LexemeType.Types.COMMA); break;
-                    case '.': AddSymbol( t, LexemeType.Types.DOT); break;
-                    case '+': AddSymbol( t, LexemeType.Types.PLUS); break;
-                    case ';': AddSymbol( t, LexemeType.Types.SEMICOLON); break;
-                    case '*': AddSymbol( t, LexemeType.Types.STAR); break;
+                        {
+                            AddSymbol(t, LexemeType.Types.LEFT_PAREN);
+                            break;
+                        }
+                    case ')': AddSymbol(t, LexemeType.Types.RIGHT_PAREN); break;
+                    case '{': AddSymbol(t, LexemeType.Types.LEFT_BRACE); break;
+                    case '}': AddSymbol(t, LexemeType.Types.RIGHT_BRACE); break;
+                    case ',': AddSymbol(t, LexemeType.Types.COMMA); break;
+                    case '.': AddSymbol(t, LexemeType.Types.DOT); break;
+                    case '+': AddSymbol(t, LexemeType.Types.PLUS); break;
+                    case ';': AddSymbol(t, LexemeType.Types.SEMICOLON); break;
+                    case '*': AddSymbol(t, LexemeType.Types.STAR); break;
                     case '[':
-                    {
-                        AddSymbol(t, LexemeType.Types.LEFT_BRACE);
-                        if (IsDigit(Peek()) || IsNumber(Peek()))
                         {
-                            // HACK
-                            start++;
-                            // HACK
-                            Number();
-                        }
+                            AddSymbol(t, LexemeType.Types.LEFT_BRACE);
+                            if (IsDigit(Peek()) || IsNumber(Peek()))
+                            {
+                                // HACK
+                                start++;
+                                // HACK
+                                Number();
+                            }
 
-                        if (Peek() == ']')
-                        {
-                            AddSymbol(Peek(), LexemeType.Types.RIGHT_BRACE);
-                        }
+                            if (Peek() == ']')
+                            {
+                                AddSymbol(Peek(), LexemeType.Types.RIGHT_BRACE);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case '-':
-                    {
-                        if (IsDigit(Peek()) || IsNumber(Peek()))
                         {
-                            Number();
-                        } else
-                        {
-                            AddSymbol(t, LexemeType.Types.MINUS);
-                        }
+                            if (IsDigit(Peek()) || IsNumber(Peek()))
+                            {
+                                Number();
+                            }
+                            else
+                            {
+                                AddSymbol(t, LexemeType.Types.MINUS);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case '/':
                         if (Peek() == '/')
                         {
-                            while (Peek() != '\n' && !IsEndOfFile())
+                            while (Peek() != '\n' && !IsEof())
                             {
                                 Advance();
                             }
@@ -192,7 +175,7 @@ namespace JukaCompiler.Scan
                                     Advance();
                                     break;
                                 }
-                                if (IsEndOfFile())
+                                if (IsEof())
                                 {
                                     throw new Exception("Comment is not closed");
                                 }
@@ -207,13 +190,13 @@ namespace JukaCompiler.Scan
 
                     case '=':
                         {
-                            if( Peek() == '=') 
+                            if (Peek() == '=')
                             {
-                                AddSymbol( t ,LexemeType.Types.EQUAL_EQUAL);
+                                AddSymbol(t, LexemeType.Types.EQUAL_EQUAL);
                                 break;
                             }
 
-                            AddSymbol(t ,LexemeType.Types.EQUAL);
+                            AddSymbol(t, LexemeType.Types.EQUAL);
                             break;
                         }
 
@@ -225,7 +208,7 @@ namespace JukaCompiler.Scan
                                 break;
                             }
 
-                            AddSymbol(t, LexemeType.Types.LESS); 
+                            AddSymbol(t, LexemeType.Types.LESS);
                             break;
                         }
 
@@ -241,21 +224,24 @@ namespace JukaCompiler.Scan
                             break;
                         }
 
+
+                    /*
                     case '!':
-                        {
-                            if (Peek() == '=')
-                            {
-                                AddSymbol(t, LexemeType.Types.BANG_EQUAL);
+                        { 
+                            if (Match('='))
+                            { 
+                                kind = LexemeType.Types.BANG_EQUAL;
+                                break;
                             }
-                            else
-                            {
-                                AddSymbol(t, LexemeType.Types.BANG);
-                            }
+
+                            kind = LexemeType.Types.BANG;
+                            break;
                         }
-                    break;
-                    case '"' : String(); break;
+                position++;
+                */
+                    case '"': String(); break;
                     default:
-                        compilerError.AddError(line + "Unexpected character.");
+                        //Lox.error(line, "Unexpected character.");
                         break;
                 }
             }
@@ -263,14 +249,14 @@ namespace JukaCompiler.Scan
             IsWhiteSpace();
         }
 
-        private void AddSymbol(char symbol, LexemeType.Types type)
+        internal void AddSymbol(char symbol, LexemeType.Types type)
         {
-            Lexeme lex = new(type, this.line, this.column);
+            var lex = new Lexeme(type, this.line, this.column);
             lex.AddToken(symbol);
             this.lexemes.Add(lex);
         }
 
-        internal static bool TryGetKeyWord(Lexeme? lex)
+        internal bool TryGetKeyWord(Lexeme? lex)
         {
             bool isKeyword = false;
 
@@ -297,13 +283,13 @@ namespace JukaCompiler.Scan
 
         internal bool IsWhiteSpace()
         {
-            if (IsEndOfFile())
+            if (IsEof())
             {
                 return false;
             }
 
             char c = (char)fileData[current];
-            if (Char.IsWhiteSpace((char) c) || c == '\r' || c == '\n')
+            if (Char.IsWhiteSpace((char)c) || c == '\r' || c == '\n')
             {
                 if (c == '\n')
                 {
@@ -323,13 +309,13 @@ namespace JukaCompiler.Scan
                 Advance();
             }
 
-            string svalue = Encoding.Default.GetString(Memcopy(fileData, start));
+            var svalue = Encoding.Default.GetString(Memcopy(fileData, start, current));
             Lexeme? identifier = new(LexemeType.Types.IDENTIFIER, this.line, this.column);
-            
+
             identifier.AddToken(svalue);
 
             TryGetKeyWord(identifier);
-            lexemes.Add(identifier);
+            this.lexemes.Add(identifier);
         }
         internal void Number()
         {
@@ -341,7 +327,7 @@ namespace JukaCompiler.Scan
                 temp = Peek();
             }
 
-            string svalue = System.Text.Encoding.Default.GetString(Memcopy(fileData, start));
+            var svalue = System.Text.Encoding.Default.GetString(Memcopy(fileData, start, current));
             Lexeme? number = new(LexemeType.Types.NUMBER, this.line, this.column);
 
             number.AddToken(svalue);
@@ -351,33 +337,33 @@ namespace JukaCompiler.Scan
 
         private void String()
         {
-            while( Peek() != '"' && !IsEndOfFile())
+            while (Peek() != '"' && !IsEof())
             {
                 if (Peek() == '\n')
                 {
                     this.line++;
                 }
-                
+
                 Advance();
             }
 
-            if(IsEndOfFile())
+            if (IsEof())
             {
                 // Log exception;
                 return;
             }
 
-            string svalue = Encoding.Default.GetString(Memcopy(fileData, start + 1));
+            var svalue = System.Text.Encoding.Default.GetString(Memcopy(fileData, start + 1, current - 1));
             Lexeme? s = new(LexemeType.Types.STRING, this.line, this.column);
             s.AddToken(svalue.ToString());
             this.lexemes.Add(s);
             Advance();
         }
 
-        private byte[] Memcopy(byte[] from, int start)
+        private byte[] Memcopy(byte[] from, int start, int size)
         {
-            byte [] to = new byte[current - start];
-            for(int toIndex = 0, i = start; i < current; i++, toIndex++)
+            byte[] to = new byte[current - start];
+            for (int toIndex = 0, i = start; i < current; i++, toIndex++)
             {
                 to[toIndex] = from[i];
             }
@@ -387,7 +373,7 @@ namespace JukaCompiler.Scan
 
         private char Advance()
         {
-            if (!IsEndOfFile())
+            if (!IsEof())
             {
                 return (char)fileData[current++];
             }
@@ -396,7 +382,7 @@ namespace JukaCompiler.Scan
         }
         internal char Peek()
         {
-            if (!IsEndOfFile())
+            if (!IsEof())
             {
                 return (char)fileData[current];
             }

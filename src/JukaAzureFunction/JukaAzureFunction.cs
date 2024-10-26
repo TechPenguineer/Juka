@@ -48,12 +48,12 @@ public class JukaAzureFunction(ILogger<JukaAzureFunction> log)
 
         string outputValue = compiler.CompileJukaCode(code, false);
 
-        if (compiler.CheckForErrors())
+        if (compiler.HasErrors())
         {
 
             HttpResponseData response2 = req.CreateResponse(HttpStatusCode.OK);
             response2.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-            string errors = string.Join(Environment.NewLine, compiler.GetErrorList());
+            string errors = string.Join(Environment.NewLine, compiler.ListErrors());
             response2.WriteString(JsonConvert.SerializeObject(new { errors, original = code }));
             return response2;
         }

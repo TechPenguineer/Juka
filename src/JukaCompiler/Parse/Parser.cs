@@ -8,12 +8,9 @@ using static JukaCompiler.Expressions.Expr;
 
 namespace JukaCompiler.Parse
 {
-    /// <summary>
-    /// 
-    /// </summary>
     public class Parser
     {
-        private List<Lexeme> tokens = [];
+        private List<Lexeme> tokens = new();
         private int current = 0;
         private Scanner? scanner;
         public ServiceProvider Services { get; }
@@ -27,7 +24,7 @@ namespace JukaCompiler.Parse
             this.compilerError = services.GetRequiredService<ICompilerError>();
         }
 
-        internal List<Statement> Parse()
+        internal List<Stmt> Parse()
         {
             if (scanner == null)
             {
@@ -35,8 +32,8 @@ namespace JukaCompiler.Parse
             }
 
             tokens = scanner.Scan()!;
-            List<Statement> statements = [];
-            while(!IsAtEnd())
+            List<Stmt> statements = new();
+            while (!IsAtEnd())
             {
                 statements.Add(Declaration());
             }
@@ -46,7 +43,12 @@ namespace JukaCompiler.Parse
 
         private bool IsAtEnd()
         {
-            return current == tokens.Count || Peek().LexemeType == LexemeType.Types.EOF;
+            if (current == tokens.Count || Peek().LexemeType == LexemeType.Types.EOF)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private Lexeme Peek()
@@ -56,7 +58,7 @@ namespace JukaCompiler.Parse
 
         private Lexeme Previous()
         {
-            return tokens[current - 1]; 
+            return tokens[current - 1];
         }
 
         private Lexeme Peek(int lookAhead)
@@ -79,7 +81,7 @@ namespace JukaCompiler.Parse
             return Previous();
         }
 
-        private Statement Declaration()
+        private Stmt Declaration()
         {
             if (Match(LexemeType.Types.CLASS))
             {
@@ -87,9 +89,9 @@ namespace JukaCompiler.Parse
             }
 
 
-            if (Match(LexemeType.Types.SUB))
+            if (Match(LexemeType.Types.FUNC))
             {
-                return Function("sub");
+                return Function("func");
             }
 
             if (MatchKeyWord())
@@ -97,29 +99,17 @@ namespace JukaCompiler.Parse
                 return VariableDeclaration();
             }
 
-            if (MatchInternalFunction())
-            {
-                return VariableDeclaration();
-            }
-
-            if (Match(LexemeType.Types.IDENTIFIER))
-            {
-                return VariableDeclaration();
-            }
-
-            
-
             return Statement();
         }
 
-        private Statement Statement()
+        private Stmt Statement()
         {
-            if (Match(LexemeType.Types.PRINTLINE))
+            if (Match(LexemeType.Types.INTERNALFUNCTION | LexemeType.Types.PRINTLINE))
             {
                 return PrintLine();
             }
 
-            if (Match(LexemeType.Types.PRINT))
+            if (Match(LexemeType.Types.INTERNALFUNCTION | LexemeType.Types.PRINT))
             {
                 return Print();
             }
@@ -129,14 +119,14 @@ namespace JukaCompiler.Parse
                 return ReturnStatement();
             }
 
-            if (Match(LexemeType.Types.IF)) 
+            if (Match(LexemeType.Types.IF))
             {
                 return IfStatement();
             }
 
             if (Match(LexemeType.Types.LEFT_BRACE))
             {
-                return new Statement.Block(Block());
+                return new Stmt.Block(Block());
             }
 
             if (Match(LexemeType.Types.WHILE))
@@ -157,11 +147,11 @@ namespace JukaCompiler.Parse
             return ExpressionStatement();
         }
 
-        private Statement.If IfStatement()
+        private Stmt IfStatement()
         {
             Consume(LexemeType.Types.LEFT_PAREN, Previous());
 
-            Expr? condition = Expr();
+            var condition = Expr();
 
             if (condition == null)
             {
@@ -170,8 +160,8 @@ namespace JukaCompiler.Parse
 
             Consume(LexemeType.Types.RIGHT_PAREN, Previous());
 
-            Statement thenBlock = Statement();
-            Statement? elseBlock = null;
+            var thenBlock = Statement();
+            Stmt? elseBlock = null;
 
             if (Match(LexemeType.Types.ELSE))
             {
@@ -180,40 +170,40 @@ namespace JukaCompiler.Parse
 
             if (condition != null && elseBlock != null)
             {
-                return new Statement.If(condition, thenBlock, elseBlock);
+                return new Stmt.If(condition, thenBlock, elseBlock);
             }
 
             throw new JRuntimeException("If statement failure");
         }
 
-        private Statement.While WhileStatement()
+        private Stmt WhileStatement()
         {
             Consume(LexemeType.Types.LEFT_PAREN, Previous());
 
-            Expr condition = Expr();
+            var condition = Expr();
 
             Consume(LexemeType.Types.RIGHT_PAREN, Previous());
 
-            Statement whileBlock = Statement();
+            var whileBlock = Statement();
 
-            return new Statement.While(condition, whileBlock);
+            return new Stmt.While(condition, whileBlock);
         }
 
-        private Statement.For ForStatement()
+        private Stmt ForStatement()
         {
             Consume(LexemeType.Types.LEFT_PAREN, Previous());
             if (MatchKeyWord())
             {
-                Statement.Var initCondition = VariableDeclaration();
+                Stmt.Var initCondition = VariableDeclaration();
 
                 Expr.Binary breakCondition = (Expr.Binary)Equality();
                 Consume(LexemeType.Types.SEMICOLON, Previous());
 
-                Expr incrementCondition = Unary();
+                var incrementCondition = Unary();
 
                 Consume(LexemeType.Types.RIGHT_PAREN, Previous());
 
-                Statement forBody = null!;
+                Stmt forBody = null!;
                 if (Match(LexemeType.Types.LEFT_BRACE))
                 {
                     forBody = Statement();
@@ -221,23 +211,23 @@ namespace JukaCompiler.Parse
 
                 Consume(LexemeType.Types.RIGHT_BRACE, Peek());
 
-                return new Statement.For(initCondition, breakCondition, incrementCondition, forBody);
+                return new Stmt.For(initCondition, breakCondition, incrementCondition, forBody);
             }
 
             throw new JRuntimeException("no valid variable");
         }
 
-        private Statement.Break BreakStatement()
+        private Stmt BreakStatement()
         {
             Consume(LexemeType.Types.SEMICOLON, Previous());
-            Expr expr = Expr();
-            return new Statement.Break(expr);
+            var expr = Expr();
+            return new Stmt.Break(expr);
         }
 
 
-        private Statement.Return ReturnStatement()
+        private Stmt ReturnStatement()
         {
-            Lexeme keyword = Previous();
+            var keyword = Previous();
             Expr value = null!;
 
             if (!Check(LexemeType.Types.SEMICOLON))
@@ -251,17 +241,17 @@ namespace JukaCompiler.Parse
             }
 
             Consume(LexemeType.Types.SEMICOLON, Previous());
-            return new Statement.Return(keyword, value);
+            return new Stmt.Return(keyword, value);
         }
 
-        private Statement.Expression ExpressionStatement()
+        private Stmt ExpressionStatement()
         {
             Expr expr = Expr();
             Consume(LexemeType.Types.SEMICOLON, Peek());
-            return new Statement.Expression(expr);
+            return new Stmt.Expression(expr);
         }
 
-        private Statement.PrintLine PrintLine()
+        private Stmt PrintLine()
         {
             Lexeme keyword = Previous();
             Consume(LexemeType.Types.LEFT_PAREN, Peek());
@@ -271,10 +261,10 @@ namespace JukaCompiler.Parse
             Consume(LexemeType.Types.RIGHT_PAREN, Peek());
             Consume(LexemeType.Types.SEMICOLON, Peek());
 
-            return new Statement.PrintLine(value);
+            return new Stmt.PrintLine(value);
         }
 
-        private Statement.Print Print()
+        private Stmt Print()
         {
             Lexeme keyword = Previous();
             Consume(LexemeType.Types.LEFT_PAREN, Peek());
@@ -284,17 +274,20 @@ namespace JukaCompiler.Parse
             Consume(LexemeType.Types.RIGHT_PAREN, Peek());
             Consume(LexemeType.Types.SEMICOLON, Peek());
 
-            return new Statement.Print(value);
+            return new Stmt.Print(value);
         }
 
         private bool MatchKeyWord()
         {
+            if (MatchInternalFunction())
+            {
+                return true;
+            }
 
-
-            if(Match(LexemeType.Types.INT)        || 
-                Match(LexemeType.Types.STRING)    ||
-                Match(LexemeType.Types.FLOAT)     ||
-                Match(LexemeType.Types.DOUBLE)    ||
+            if (Match(LexemeType.Types.INT) ||
+                Match(LexemeType.Types.STRING) ||
+                Match(LexemeType.Types.FLOAT) ||
+                Match(LexemeType.Types.DOUBLE) ||
                 Match(LexemeType.Types.VAR))
             {
                 return true;
@@ -305,8 +298,7 @@ namespace JukaCompiler.Parse
 
         private Lexeme Consume(LexemeType.Types type, Lexeme currentLexeme)
         {
-            var mytemp = Check(type);
-            if (mytemp)
+            if (Check(type))
             {
                 return Advance();
             }
@@ -324,7 +316,7 @@ namespace JukaCompiler.Parse
             }
 
             compilerError.AddError("Unable to Keyword");
-            return new Lexeme(LexemeType.Types.UNDEFINED, 0,0);
+            return new Lexeme(LexemeType.Types.UNDEFINED, 0, 0);
         }
 
         private bool Match(LexemeType.Types lexType)
@@ -379,23 +371,21 @@ namespace JukaCompiler.Parse
             return false;
         }
 
-        private Statement.Function Function(string kind)
+        private Stmt Function(string kind)
         {
-
             Lexeme name = Consume(LexemeType.Types.IDENTIFIER, Peek());
-
             Consume(LexemeType.Types.LEFT_PAREN, Peek());
-            List<TypeParameterMap> typeMap = [];
+            var typeMap = new List<TypeParameterMap>();
 
             if (!Check(LexemeType.Types.RIGHT_PAREN))
             {
                 do
                 {
-                    Lexeme parameterType = ConsumeKeyword();
-                    Expr varName = Expr();
+                    var parameterType = ConsumeKeyword();
+                    var varName = Expr();
                     if (parameterType.IsKeyWord)
                     {
-                        typeMap.Add(new TypeParameterMap( parameterType,varName ));
+                        typeMap.Add(new TypeParameterMap(parameterType, varName));
                     }
                 }
                 while (Match(LexemeType.Types.COMMA));
@@ -405,34 +395,33 @@ namespace JukaCompiler.Parse
             Consume(LexemeType.Types.EQUAL, Peek());
             Consume(LexemeType.Types.LEFT_BRACE, Peek());
 
-            List<Statement> statements = Block();
+            List<Stmt> statements = Block();
 
-            //Consume(LexemeType.Types.RIGHT_BRACE, Peek());
-            Statement.Function stmt = new(name, typeMap, statements);
+            var stmt = new Stmt.Function(name, typeMap, statements);
             return stmt;
         }
 
-        private Statement.Class ClassDeclaration(string kind)
+        private Stmt ClassDeclaration(string kind)
         {
             Lexeme name = Consume(LexemeType.Types.IDENTIFIER, Peek());
             Consume(LexemeType.Types.EQUAL, Peek());
             Consume(LexemeType.Types.LEFT_BRACE, Peek());
-            List<Statement.Function> functions = [];
-            List<Statement> variableDeclarations = [];
+            List<Stmt.Function> functions = new();
+            List<Stmt> variableDeclarations = new();
 
-            if(!Check(LexemeType.Types.RIGHT_BRACE))
+            if (!Check(LexemeType.Types.RIGHT_BRACE))
             {
-                while(true)
+                while (true)
                 {
-                    Lexeme isFunc = Peek();
+                    var isFunc = Peek();
                     if (!isFunc.IsKeyWord)
                     {
                         break;
                     }
 
-                    if (isFunc.LexemeType == LexemeType.Types.SUB)
+                    if (isFunc.LexemeType == LexemeType.Types.FUNC)
                     {
-                        functions.Add((Statement.Function)Declaration());
+                        functions.Add((Stmt.Function)Declaration());
                     }
 
                     if (MatchKeyWord())
@@ -444,12 +433,12 @@ namespace JukaCompiler.Parse
 
             Consume(LexemeType.Types.RIGHT_BRACE, Peek());
 
-            return new Statement.Class(name, functions, variableDeclarations);
+            return new Stmt.Class(name, functions, variableDeclarations);
         }
 
-        private List<Statement> Block()
+        private List<Stmt> Block()
         {
-            List<Statement> stmts = [];
+            var stmts = new List<Stmt>();
             while (!Check(LexemeType.Types.RIGHT_BRACE) && !IsAtEnd())
             {
                 stmts.Add(Declaration());
@@ -459,20 +448,20 @@ namespace JukaCompiler.Parse
             return stmts;
         }
 
-        private Statement.Var VariableDeclaration()
+        private Stmt.Var VariableDeclaration()
         {
             Lexeme name = Consume(LexemeType.Types.IDENTIFIER, Peek());
 
             if (Match(LexemeType.Types.EQUAL))
             {
-                Expr initalizedState = Expr();
+                var initalizedState = Expr();
                 Consume(LexemeType.Types.SEMICOLON, Peek());
-                return new Statement.Var(name, initalizedState);
+                return new Stmt.Var(name, initalizedState);
             }
 
             Consume(LexemeType.Types.SEMICOLON, Peek());
 
-            return new Statement.Var(name);
+            return new Stmt.Var(name);
         }
 
         private Expr Expr()
@@ -491,24 +480,24 @@ namespace JukaCompiler.Parse
 
                 //expr.ExpressionLexemeName =
 
-                if (expr is Expr.Variable exprVariables &&
-                    exprVariables != null &&
-                    exprVariables.ExpressionLexeme != null)
+                if (expr is Expr.Variable &&
+                    ((Expr.Variable)expr) != null &&
+                    ((Expr.Variable)expr).ExpressionLexeme != null)
                 {
-                    Expr.Variable variable = exprVariables;
+                    Expr.Variable variable = (Expr.Variable)expr;
                     //expr.ExpressionLexemeName = variable.ExpressionLexeme.
-                    if (variable != null && variable.ExpressionLexeme != null) 
+                    if (variable != null && variable.ExpressionLexeme != null)
                     {
                         return new Expr.Assign(variable.ExpressionLexeme, value);
                     }
                     //> Classes assign-set
                 }
 
-                if (expr is Expr.Get exprGet &&
-                    exprGet != null &&
-                    exprGet.ExpressionLexeme != null) 
+                if (expr is Expr.Get &&
+                    ((Expr.Get)expr) != null &&
+                    ((Expr.Get)expr).ExpressionLexeme != null)
                 {
-                    Expr.Get get = exprGet;
+                    Expr.Get get = (Expr.Get)expr;
                     if (get != null && get.ExpressionLexeme != null)
                     {
                         return new Expr.Set(get, get.ExpressionLexeme, value);
@@ -516,7 +505,7 @@ namespace JukaCompiler.Parse
                     //< Classes assign-set
                 }
 
-                Console.WriteLine("Invalid assignment target."); // [no-throw]
+                //error(equals, "Invalid assignment target."); // [no-throw]
             }
 
             return expr;
@@ -534,7 +523,7 @@ namespace JukaCompiler.Parse
                 // Bug - I need to consume the second operator when doing comparisions.
                 // Hack I need to figure out a better way to do this.
                 Lexeme secondOp = Advance();
-                if ( secondOp.LexemeType == LexemeType.Types.EQUAL)
+                if (secondOp.LexemeType == LexemeType.Types.EQUAL)
                 {
                     op.AddToken(secondOp);
                     op.LexemeType = LexemeType.Types.EQUAL_EQUAL;
@@ -558,7 +547,7 @@ namespace JukaCompiler.Parse
             {
                 Lexeme op = Previous();
                 Expr right = And();
-                expr = new Logical(expr, op, right);
+                expr = new Expr.Logical(expr, op, right);
             }
 
             return expr;
@@ -572,7 +561,7 @@ namespace JukaCompiler.Parse
             {
                 Lexeme op = Previous();
                 Expr right = Equality();
-                expr = new Logical(expr, op, right);
+                expr = new Expr.Logical(expr, op, right);
             }
 
             return expr;
@@ -586,7 +575,7 @@ namespace JukaCompiler.Parse
             {
                 Lexeme op = Previous();
                 Expr right = Term();
-                expr = new Binary(expr, op, right);
+                expr = new Expr.Binary(expr, op, right);
             }
 
             return expr;
@@ -600,7 +589,7 @@ namespace JukaCompiler.Parse
             {
                 Lexeme op = Previous();
                 Expr right = Factor();
-                expr = new Binary(expr, op, right);
+                expr = new Expr.Binary(expr, op, right);
             }
 
             return expr;
@@ -626,9 +615,9 @@ namespace JukaCompiler.Parse
 
             if (Match(LexemeType.Types.BANG))
             {
-                //Lexeme op = Previous();
-                //Expr right = Unary();
-                //return new Expr.Unary(op, right);
+                Lexeme op = Previous();
+                Expr right = Unary();
+                //******* return new Expr.Unary(op, right);
             }
 
             Lexeme idLexeme = Peek();
@@ -646,8 +635,8 @@ namespace JukaCompiler.Parse
                 {
                     // If we get here then we have an identifier on the right hand side.
                     // the parent expression will need to validate that it is a variable.
-                    Lexeme lexeme = Consume(LexemeType.Types.IDENTIFIER, Peek());
-                    Variable variable = new(lexeme);
+                    var lexeme = Consume(LexemeType.Types.IDENTIFIER, Peek());
+                    var variable = new Expr.Variable(lexeme);
                     return new DeleteDeclarationExpr(variable);
                 }
             }
@@ -662,7 +651,7 @@ namespace JukaCompiler.Parse
                     Match(LexemeType.Types.PLUS);
                     Match(LexemeType.Types.PLUS);
                     Match(LexemeType.Types.SEMICOLON);
-                    return new Unary(idLexeme, LexemeType.Types.PLUSPLUS);
+                    return new Expr.Unary(idLexeme, LexemeType.Types.PLUSPLUS);
                 }
             }
 
@@ -682,7 +671,7 @@ namespace JukaCompiler.Parse
                 else if (Match(LexemeType.Types.DOT))
                 {
                     Lexeme name = Consume(LexemeType.Types.IDENTIFIER, Peek());
-                    expr = new Get(expr, name);
+                    expr = new Expr.Get(expr, name);
                 }
                 else
                 {
@@ -694,18 +683,18 @@ namespace JukaCompiler.Parse
 
         private Expr Primary()
         {
-            if (Match(LexemeType.Types.FALSE)) return new Literal(Previous(), LexemeType.Types.FALSE);
-            if (Match(LexemeType.Types.TRUE)) return new Literal(Previous(), LexemeType.Types.TRUE);
-            if (Match(LexemeType.Types.NULL)) return new Literal(Previous(), LexemeType.Types.NULL);
+            if (Match(LexemeType.Types.FALSE)) return new Expr.Literal(Previous(), LexemeType.Types.FALSE);
+            if (Match(LexemeType.Types.TRUE)) return new Expr.Literal(Previous(), LexemeType.Types.TRUE);
+            if (Match(LexemeType.Types.NULL)) return new Expr.Literal(Previous(), LexemeType.Types.NULL);
 
             if (Match(LexemeType.Types.STRING))
             {
-                return new Literal(Previous(), LexemeType.Types.STRING);
+                return new Expr.Literal(Previous(), LexemeType.Types.STRING);
             }
 
             if (Match(LexemeType.Types.NUMBER))
             {
-                return new Literal(Previous(), LexemeType.Types.NUMBER);
+                return new Expr.Literal(Previous(), LexemeType.Types.NUMBER);
             }
 
             if (Match(LexemeType.Types.ARRAY))
@@ -715,7 +704,7 @@ namespace JukaCompiler.Parse
                 Consume(LexemeType.Types.RIGHT_BRACE, Peek());
                 var name = new Lexeme(LexemeType.Types.ARRAY, 0, 0);
                 name.AddToken("array");
-                return new ArrayDeclarationExpr(name,size);
+                return new Expr.ArrayDeclarationExpr(name, size);
             }
 
             if (Match(LexemeType.Types.NEW))
@@ -723,7 +712,7 @@ namespace JukaCompiler.Parse
                 var expr = Expr();
             }
 
-            if ( Match(LexemeType.Types.IDENTIFIER))
+            if (Match(LexemeType.Types.IDENTIFIER))
             {
                 Lexeme identifierName = Previous();
                 if (Match(LexemeType.Types.LEFT_BRACE))
@@ -732,13 +721,12 @@ namespace JukaCompiler.Parse
                     Consume(LexemeType.Types.RIGHT_BRACE, Peek());
                     if (Match(LexemeType.Types.EQUAL))
                     {
-                        return new ArrayAccessExpr(identifierName, index, Expr());
+                        return new Expr.ArrayAccessExpr(identifierName, index, Expr());
                     }
 
-                    return new ArrayAccessExpr(identifierName, index);
+                    return new Expr.ArrayAccessExpr(identifierName, index);
                 }
 
-                 //return Assignment();
                 return new Expr.Variable(identifierName);
             }
 
@@ -757,9 +745,9 @@ namespace JukaCompiler.Parse
             throw new Exception(Peek() + "Expect expr");
         }
 
-        private Call FinishCall(Expr callee)
+        private Expr FinishCall(Expr callee)
         {
-            List<Expr> arguments = [];
+            List<Expr> arguments = new();
             if (!Check(LexemeType.Types.RIGHT_PAREN))
             {
                 do
@@ -770,20 +758,20 @@ namespace JukaCompiler.Parse
                     //    error(peek(), "Can't have more than 255 arguments.");
                     //}
                     ////< check-max-arity
-                    
+
                     arguments.Add(Expr());
 
                 } while (Match(LexemeType.Types.COMMA));
             }
 
 
-            Array callableServices = Enum.GetValues(typeof(SystemCalls.CallableServices));
+            var callableServices = Enum.GetValues(typeof(JukaCompiler.SystemCalls.CallableServices));
             bool isCallable = false;
-            foreach(object? callableService in callableServices)
+            foreach (var callableService in callableServices)
             {
                 if (callableService != null)
                 {
-                    string? serviceName = callableService.ToString();
+                    var serviceName = callableService.ToString();
                     if (!string.IsNullOrEmpty(serviceName))
                     {
                         isCallable = serviceName.Equals(callee.ExpressionLexeme?.ToString());
@@ -793,7 +781,7 @@ namespace JukaCompiler.Parse
 
             Consume(LexemeType.Types.RIGHT_PAREN, Peek());
 
-            return new Call(callee, isCallable, arguments);
+            return new Expr.Call(callee, isCallable, arguments);
         }
     }
 }

@@ -9,139 +9,136 @@ using JukaCompiler.Expressions;
 using JukaCompiler.SystemCalls;
 using JukaCompiler.Lexer;
 
+
 namespace JukaCompiler
 {
-    /// <summary>
-    /// Represents the Compiler class which is responsible for compiling Juka code.
-    /// </summary> 
+    /*
+     * Maing entry point into the compiler responsible for setting up DI container 
+     * Calling parser and compiler (currently interpreter.
+     */
     public class Compiler
     {
-        private ServiceProvider _serviceProvider;
-        private HostBuilder _hostBuilder;
+        private ServiceProvider? serviceProvider = null;
 
-
-        // Constructor for Compiler class that initializes service providers for error handling, system calls, file opening, C# operations, system clock, and available memory.
-        // It creates a new HostBuilder instance, configures services by adding singletons for various interfaces like ICompilerError, IJukaCallable, IFileOpener, ICSharp, ISystemClock, and others,
-        // and then builds a service provider to store these singletons. Finally, it builds the HostBuilder.
         public Compiler()
         {
-            _hostBuilder = new HostBuilder();
-            _hostBuilder.ConfigureServices(services =>
-            {
-                ArgumentNullException.ThrowIfNull(services);
+            Initialize();
+        }
 
+        internal void Initialize()
+        {
+            var hostBuilder = new HostBuilder();
+            hostBuilder.ConfigureServices(services =>
+            {
                 services.AddSingleton<ICompilerError, CompilerError>();
                 services.AddSingleton<IJukaCallable, JukaSystemCalls>();
-                services.AddSingleton<IFileOpener, FileOpen>();
                 services.AddSingleton<ICSharp, CSharp>();
                 services.AddSingleton<ISystemClock, SystemClock>();
                 services.AddSingleton<IGetAvailableMemory, GetAvailableMemory>();
-                _serviceProvider = services.BuildServiceProvider();
+                this.serviceProvider = services.BuildServiceProvider();
             });
-            _hostBuilder.Build();
+            hostBuilder.Build();
         }
-        
 
-        // Compiles Juka code provided in 'data' and returns the console output after interpreting the statements or an error message if compilation fails.
-        // CompileJukaCode that compiles Juka code provided in the data string. It uses a Parser to parse the code and then interprets the statements.
-        // If successful, it returns the console output.
-        // If there's an error during compilation, it returns an error message with details about the exception.
-        public string CompileJukaCode(string data, bool isFile = true)
+        // Run the Compiler (Step: 3)
+        public string CompileJukaCode(String data, bool isFile = true, int debug = 0)
         {
-            CheckServiceProvider();
-
             try
             {
-                _serviceProvider.GetRequiredService<ICompilerError>().SourceFileName(data);
+                var provider = this.serviceProvider;
+                if (provider != null)
+                {
+                    provider.GetRequiredService<ICompilerError>().SourceFileName(data);
 
-                Scanner scanned = new(data, _serviceProvider, isFile);
-                Parser parser = new(scanned, _serviceProvider);
-                List<Statement> statements = parser.Parse();
+                    Parser parser = new(new Scanner(data, provider, isFile), provider);
+                    List<Stmt> statements = parser.Parse();
 
-                return Compile(statements);
+                    return Compile(statements);
+                }
             }
             catch (Exception ex)
             {
                 return $"Error compiling {ex.Message}";
             }
+
+            throw new Exception("unhandled errors");
         }
 
-
-        // Compiles a list of statements using the JukaInterpreter and Resolver, then sets up a main method runtime hook.
-        // Returns the console output after interpreting the statements or an exception message if an error occurs.
-        //This code defines a method named Compile that compiles a list of statements using a JukaInterpreter and a Resolver.
-        //It sets up a main method runtime hook, redirects console output to capture it, interprets the statements, and returns the console output as a string.
-        //If an exception occurs during interpretation, it returns the exception message.
-        private string Compile(List<Statement> statements)
+        private string Compile(List<Stmt> statements)
         {
-            JukaInterpreter interpreter = new(services: _serviceProvider);
-            Resolver resolver = new(interpreter);
-            resolver.Resolve(statements);
-
-            SetupMainMethodRuntimeHook(statements, resolver);
-
-            TextWriter currentOut = Console.Out;
-
-            try
+            if (serviceProvider != null)
             {
-                using StringWriter stringWriter = new();
-                Console.SetOut(stringWriter);
-                interpreter.Interpret(statements);
+                var interpreter = new JukaInterpreter(serviceProvider);
+                Resolver? resolver = new(interpreter);
+                resolver.Resolve(statements);
 
-                string consoleOutput = stringWriter.ToString();
-                Console.SetOut(currentOut);
-                return consoleOutput;
+                SetupMainMethodRuntimeHook(statements, resolver);
+
+                var currentOut = Console.Out;
+
+                try
+                {
+                    using StringWriter stringWriter = new();
+                    Console.SetOut(stringWriter);
+                    interpreter.Interpret(statements);
+
+                    string consoleOutput = stringWriter.ToString();
+                    Console.SetOut(currentOut);
+                    return consoleOutput;
+                }
+                catch (Exception e)
+                {
+                    Console.SetOut(currentOut);
+                    return e.ToString();
+                }
             }
-            catch (Exception e)
-            {
-                Console.SetOut(currentOut);
-                return e.ToString();
-            }
+
+            throw new JRuntimeException("Service provider is not created");
         }
 
-
-        /// <summary>
-        /// This code snippet sets up a runtime hook for the main method by identifying the main function from a list of statements. 
-        /// It then creates a call to the main function and resolves it using a resolver object. 
-        /// If the main function is not found, it throws an exception indicating that no main function is defined.
-        /// </summary>
-        /// <param name="statements"></param>
-        /// <param name="resolver"></param>
-        /// <exception cref="Exception"></exception>
-        private static void SetupMainMethodRuntimeHook(List<Statement> statements, Resolver resolver)
+        private static void SetupMainMethodRuntimeHook(List<Stmt> statements, Resolver resolver)
         {
-            Statement.Function mainFunction = statements.OfType<Statement.Function>().FirstOrDefault(f => f.StmtLexemeName.Equals("main")) ?? throw new Exception("No main function is defined");
+            var allFunctions = statements.Where(e => e is Stmt.Function == true).ToList();
+
+            foreach (var m in allFunctions)
+            {
+                if (((Stmt.Function)m).StmtLexemeName.Equals("main"))
+                {
+                    break;
+                }
+                else
+                {
+                    continue;
+                }
+
+                throw new Exception("No main function is defined");
+            }
+
             Lexeme lexeme = new(LexemeType.Types.IDENTIFIER, 0, 0);
             lexeme.AddToken("main");
-            Expr.Variable subroutineName = new(lexeme);
-            Expr.Call call = new(subroutineName, false, []);
-            Statement.Expression expression = new(call);
-            resolver.Resolve([expression]);
+            Expr.Variable functionName = new(lexeme);
+            Expr.Call call = new(functionName, false, new List<Expr>());
+            Stmt.Expression expression = new(call);
+            resolver.Resolve(new List<Stmt>() { expression });
         }
 
-        public bool CheckForErrors()
+        public bool HasErrors()
         {
-            CheckServiceProvider();
-            return _serviceProvider.GetRequiredService<ICompilerError>().HasErrors();
+            var provider = this.serviceProvider;
+            return provider != null && provider.GetRequiredService<ICompilerError>().HasErrors();
         }
 
-        public List<string> GetErrorList()
+        public List<String> ListErrors()
         {
-            CheckServiceProvider();
-            return _serviceProvider.GetRequiredService<ICompilerError>().ListErrors;
-        }
-
-        private void CheckServiceProvider()
-        {
-            if (_serviceProvider == null)
+            var provider = this.serviceProvider;
+            if (provider != null)
             {
-                throw new Exception("Service provider is not created");
+                return provider.GetRequiredService<ICompilerError>().ListErrors();
             }
+
+            throw new JRuntimeException("unable to initialize provider for errors");
         }
-    }
-    public class CompilerException(string message, Exception innerException) : Exception(message, innerException)
-    {
+
     }
 }
-
 

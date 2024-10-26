@@ -39,7 +39,6 @@ namespace JukaCompiler.Lexer
             ELSE,
             FALSE,
             FUNC,
-            SUB,
             FOR,
             IF,
             NULL,
@@ -67,9 +66,9 @@ namespace JukaCompiler.Lexer
     }
     internal class Lexeme
     {
-        private StringBuilder tokenBuilder = new();
-        private bool isKeyWord;
-        private long typeOfKeyWord;
+        private StringBuilder tokenBuilder = new StringBuilder();
+        private bool isKeyWord = false;
+        private Int64 typeOfKeyWord;
         private int lineNumber;
         private int columnNumber;
 
@@ -81,7 +80,7 @@ namespace JukaCompiler.Lexer
 
         internal Lexeme(LexemeType.Types ltype, int lineNumber, int columnNumber) : this()
         {
-            LexemeType = ltype;
+            this.LexemeType = ltype;
             this.lineNumber = lineNumber;
             this.columnNumber = columnNumber;
         }
@@ -93,12 +92,12 @@ namespace JukaCompiler.Lexer
 
         internal void AddToken(string token)
         {
-            tokenBuilder.Append(token);
+            this.tokenBuilder.Append(token);
         }
 
         internal void AddToken(Lexeme? token)
         {
-            tokenBuilder.Append(token?.ToString());
+            this.tokenBuilder.Append(token?.ToString());
         }
 
         internal bool IsKeyWord
@@ -109,16 +108,28 @@ namespace JukaCompiler.Lexer
 
         internal Int64 TypeOfKeyWord
         {
-            get => typeOfKeyWord;
-            set => typeOfKeyWord = value;
+            get { return this.typeOfKeyWord; }
+            set { this.typeOfKeyWord = value; }
         }
 
-        internal int LineNumber => lineNumber;
+        internal int LineNumber
+        {
+            get { return lineNumber; }
+        }
 
-        internal int ColumnNumber => columnNumber;
+        internal int ColumnNumber
+        {
+            get { return columnNumber; }
+        }
 
-        public override string ToString() => tokenBuilder.ToString();
+        public override string ToString()
+        {
+            return tokenBuilder.ToString();
+        }
 
-        internal string Literal() => ToString();
+        internal string Literal()
+        {
+            return ToString();
+        }
     }
 }

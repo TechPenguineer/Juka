@@ -85,11 +85,11 @@ class SelfUpdate
 
             AnsiConsole.MarkupLine("[Green]Finished Downloading from: [/]" + url);
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
             AnsiConsole.MarkupLine("[red]Invalid URL:[/] "+ url);
         }
-        catch(HttpRequestException ex)
+        catch(HttpRequestException)
         {
             AnsiConsole.MarkupLine("[red]Cannot connect to the URL[/] " + url);
         }
