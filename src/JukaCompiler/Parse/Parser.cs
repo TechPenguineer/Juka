@@ -303,7 +303,7 @@ namespace JukaCompiler.Parse
                 return Advance();
             }
 
-            compilerError.AddError($"Error trying to parse '{currentLexeme}' not valid at line:{currentLexeme.LineNumber} column:{currentLexeme.ColumnNumber} ");
+            compilerError.AddError($"[red]Error trying to parse [/][yellow]'{currentLexeme}'[/][red] not valid at [/][green]Line:{currentLexeme.LineNumber}[/] [teal]Column:{currentLexeme.ColumnNumber}[/] ", currentLexeme.LineNumber, currentLexeme.ColumnNumber);
 
             return new Lexeme(LexemeType.Types.UNDEFINED, 0, 0);
         }
@@ -741,6 +741,20 @@ namespace JukaCompiler.Parse
             {
                 return Assignment();
             }
+
+            if (Match(LexemeType.Types.MINUS))
+            {
+                var numb = Consume(LexemeType.Types.NUMBER,Previous());
+                //var numb = Consume(LexemeType.Types.NUMBER, Peek());
+                /*var size = Consume(LexemeType.Types.NUMBER, Peek());
+                Consume(LexemeType.Types.RIGHT_BRACE, Peek());
+                var name = new Lexeme(LexemeType.Types.ARRAY, 0, 0);
+                name.AddToken("array");
+                return new Expr.ArrayDeclarationExpr(name, size);*/
+                return new Expr.Literal(numb, LexemeType.Types.NUMBER);
+            }
+
+
 
             throw new Exception(Peek() + "Expect expr");
         }

@@ -104,7 +104,7 @@ namespace JukaCompiler.Scan
                 return;
             }
 
-            if (IsDigit(t) || IsNumber(t))
+            if ((IsDigit(t) || IsNumber(t)))
             {
                 Number();
                 return;
@@ -147,14 +147,15 @@ namespace JukaCompiler.Scan
                         }
                     case '-':
                         {
-                            if (IsDigit(Peek()) || IsNumber(Peek()))
+                            /*if ((IsDigit(Peek()) || IsNumber(Peek())) && Peek() > 0)
                             {
                                 Number();
                             }
                             else
                             {
                                 AddSymbol(t, LexemeType.Types.MINUS);
-                            }
+                            }*/
+                            AddSymbol(t, LexemeType.Types.MINUS);
 
                             break;
                         }

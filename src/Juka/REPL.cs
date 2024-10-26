@@ -443,6 +443,7 @@ namespace Juka
                     string errors = string.Join(Environment.NewLine, compiler.ListErrors());
                     AnsiConsole.MarkupLine(errors);
                     AnsiConsole.WriteLine("------");
+                    Console.WriteLine(output);
                 }
                 catch (Exception e)
                 {
@@ -450,8 +451,6 @@ namespace Juka
                     Trace.WriteLine(e);
                 }
             });
-
-            Console.WriteLine(output);
         }
 
       

@@ -27,9 +27,9 @@ public abstract class UnitTestStructure
         var outputValue = compiler.CompileJukaCode(SourceAsString, false);
 
         // If there are any compilation errors, throw an exception with the error messages
-        if (compiler.CheckForErrors())
+        if (compiler.HasErrors())
         {
-            var errorMessage = "Compilation errors:\r\n" + string.Join("\r\n", compiler.GetErrorList());
+            var errorMessage = "Compilation errors:\r\n" + string.Join("\r\n", compiler.ListErrors());
             throw new InvalidOperationException(errorMessage);
         }
 

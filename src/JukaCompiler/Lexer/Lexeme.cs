@@ -68,7 +68,7 @@ namespace JukaCompiler.Lexer
     {
         private StringBuilder tokenBuilder = new StringBuilder();
         private bool isKeyWord = false;
-        private Int64 typeOfKeyWord;
+        private long typeOfKeyWord;
         private int lineNumber;
         private int columnNumber;
 
