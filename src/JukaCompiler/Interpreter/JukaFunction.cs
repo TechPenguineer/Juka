@@ -1,15 +1,16 @@
 ﻿using JukaCompiler.Exceptions;
 using JukaCompiler.Statements;
+using System.Reflection;
 
 namespace JukaCompiler.Interpreter
 {
     internal class JukaFunction : IJukaCallable
     {
-        private Statement.Function declaration;
-        private JukaEnvironment closure;
+        private Stmt.Function? declaration;
+        private JukaEnvironment? closure;
         private bool isInitializer;
 
-        internal JukaFunction(Statement.Function declaration, JukaEnvironment closure, bool isInitializer)
+        internal JukaFunction(Stmt.Function declaration, JukaEnvironment closure, bool isInitializer)
         {
             this.isInitializer = isInitializer;
             this.declaration = declaration;
@@ -32,14 +33,14 @@ namespace JukaCompiler.Interpreter
             throw new JRuntimeException("Unable to bind");
         }
 
-        internal Statement.Function? Declaration => declaration;
+        internal Stmt.Function? Declaration => declaration;
 
         internal JukaEnvironment? Closure => closure;
 
 
         public int Arity()
         {
-            if(declaration == null)
+            if (declaration == null)
             {
                 return 0;
             }
@@ -57,13 +58,13 @@ namespace JukaCompiler.Interpreter
                 {
                     for (int i = 0; i < declaration.Params.Count; i++)
                     {
-                        Lexer.Lexeme? parameterNameExpressionLexeme = declaration.Params[i].parameterName.ExpressionLexeme;
+                        var parameterNameExpressionLexeme = declaration.Params[i].parameterName.ExpressionLexeme;
                         if (parameterNameExpressionLexeme != null)
                         {
-                            string name = parameterNameExpressionLexeme.ToString();
+                            string? name = parameterNameExpressionLexeme.ToString();
                             if (string.IsNullOrEmpty(name))
                             {
-                                throw new ArgumentException("Unable to call function: "+methodName);
+                                throw new ArgumentException("Unable to call function");
                             }
 
                             object? value = arguments[i];
@@ -76,11 +77,11 @@ namespace JukaCompiler.Interpreter
                 {
                     if (declaration?.body != null)
                     {
-                        List<Statement> body = declaration?.body!;
+                        var body = declaration?.body!;
                         interpreter.ExecuteBlock(body, environment);
                     }
                 }
-                catch(Return ex)
+                catch (Return ex)
                 {
                     if (isInitializer)
                     {

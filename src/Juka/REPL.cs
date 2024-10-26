@@ -1,5 +1,6 @@
 ﻿using Juka.Packages;
 using JukaCompiler;
+using Newtonsoft.Json;
 using Spectre.Console;
 using System.Diagnostics;
 using System.Text;
@@ -439,6 +440,9 @@ namespace Juka
                     compiler = new Compiler(); // Clear OLD params -- In future, we don't need to do this
                     DebugMe.DebugMode = 1;
                     output = compiler.CompileJukaCode(codeToExecute, isFile: false);
+                    string errors = string.Join(Environment.NewLine, compiler.ListErrors());
+                    AnsiConsole.MarkupLine(errors);
+                    AnsiConsole.WriteLine("------");
                 }
                 catch (Exception e)
                 {

@@ -31,7 +31,6 @@ namespace JukaCompiler.Interpreter
             }
             globals.Define("csharp", serviceProvider.GetService<ICSharp>());
             globals.Define("clock", serviceProvider.GetService<ISystemClock>());
-            globals.Define("fileOpen", services.GetService<IFileOpen>());
             globals.Define("getAvailableMemory", services.GetService<IGetAvailableMemory>());
         }
 

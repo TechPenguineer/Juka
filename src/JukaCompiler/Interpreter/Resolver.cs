@@ -7,20 +7,14 @@ using static JukaCompiler.Expressions.Expr;
 
 namespace JukaCompiler.Interpreter
 {
-    /// <summary>
-    /// Implements visitor interfaces for statements and expressions. 
-    /// It resolves variable scopes, handles function declarations, and tracks class inheritance. 
-    /// The Resolver class helps in analyzing and understanding the structure of code by visiting different types of statements 
-    /// and expressions to resolve variables and function calls within a given context.
-    /// </summary>
-    internal class Resolver : Statement.IVisitor<object>, Expr.IVisitor<object>
+    internal class Resolver : Stmt.IVisitor<object>, Expr.IVisitor<object>
     {
         private JukaInterpreter interpreter;
         private FunctionType currentFunction = FunctionType.NONE;
         private ClassType currentClass = ClassType.NONE;
         private ServiceProvider? ServiceProvider;
         private Stack<Dictionary<string, bool>> scopes = new();
-        private Dictionary<string, BlockScope?> processScope = [];
+        Dictionary<string, BlockScope?> processScope = new();
         private Stack<string> blockScope = new();
         private ICompilerError? compilerError;
         private string errorMessage = "Resolver error - message:{0}";
@@ -45,21 +39,21 @@ namespace JukaCompiler.Interpreter
             this.interpreter = interpreter;
 
             this.ServiceProvider = interpreter.ServiceProvider;
-            if(this.ServiceProvider != null)
-            { 
+            if (this.ServiceProvider != null)
+            {
                 this.compilerError = this.ServiceProvider?.GetService<ICompilerError>();
             }
         }
 
-        internal void Resolve(List<Statement> statements)
+        internal void Resolve(List<Stmt> statements)
         {
-            foreach(Statement stmt in statements)
+            foreach (Stmt stmt in statements)
             {
                 Resolve(stmt);
             }
         }
 
-        private void Resolve(Statement stmt)
+        private void Resolve(Stmt stmt)
         {
             stmt.Accept(this);
         }
@@ -71,22 +65,21 @@ namespace JukaCompiler.Interpreter
 
         public object VisitAssignExpr(Expr.Assign expr)
         {
-            string frame = blockScope.Peek() ?? throw new Exception(string.Format(errorMessage, "No stack frames"));
-            if (processScope.ContainsKey(frame))
+            var frame = blockScope.Peek();
+            if (frame == null)
             {
-                BlockScope? value = processScope[frame];
-                if (value != null)
+                throw new Exception(string.Format(errorMessage, "No stack frames"));
+            }
+
+            if (processScope.TryGetValue(frame, out BlockScope? value))
+            {
+                if (value != null && value.lexemeScope.TryGetValue(expr.ExpressionLexeme?.ToString()!, out var lexeme))
                 {
-                    string lexemeKey = expr.ExpressionLexeme?.ToString()!;
-                    if (value.lexemeScope.ContainsKey(lexemeKey))
-                    {
-                        Lexeme lexeme = value.lexemeScope[lexemeKey];
-                        //value.lexemeScope[expr.ExpressionLexeme.ToString] = expr.
-                        //var xx= interpreter.LookUpVariable(lexeme, expr);
-                    }
+                    //value.lexemeScope[expr.ExpressionLexeme.ToString] = expr.
+                    //var xx= interpreter.LookUpVariable(lexeme, expr);
                 }
-            } 
-            return new Statement.DefaultStatement();
+            }
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitBinaryExpr(Expr.Binary expr)
@@ -99,19 +92,19 @@ namespace JukaCompiler.Interpreter
             return new Expr.Binary();
         }
 
-        public object VisitBlockStmt(Statement.Block stmt)
+        public object VisitBlockStmt(Stmt.Block stmt)
         {
             //BeginScope(stmt.);
             Resolve(stmt.statements);
             //EndScope();
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
-        public object VisitCallExpr(Call expr)
+        public object VisitCallExpr(Expr.Call expr)
         {
-            if (expr is not null)
+            if (expr is Expr.Call)
             {
-                Call call = expr;
+                var call = (Expr.Call)expr;
                 BeginScope(expr.callee.ExpressionLexeme?.ToString()!);
                 if (expr.callee.ExpressionLexeme != null)
                 {
@@ -120,19 +113,19 @@ namespace JukaCompiler.Interpreter
                 }
 
                 if (!call.isJukaCallable)
-                { 
+                {
                     Resolve(expr.callee);
                 }
                 EndScope();
             }
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
-        public object VisitClassStmt(Statement.Class stmt)
+        public object VisitClassStmt(Stmt.Class stmt)
         {
             ClassType enclosingClass = currentClass;
             currentClass = ClassType.CLASS;
-            BlockScope blockScope = new();
+            BlockScope? blockScope = new BlockScope();
 
             Declare(stmt.name);
             Define(stmt.name);
@@ -148,11 +141,11 @@ namespace JukaCompiler.Interpreter
                 Resolve(stmt.superClass);
             }
 
-            if(stmt.superClass != null)
+            if (stmt.superClass != null)
             {
                 BeginScope(stmt.name.ToString());
-                scopes.Peek().Add("super",true);
-                
+                scopes.Peek().Add("super", true);
+
                 processScope.Add("super", blockScope);
             }
 
@@ -160,9 +153,8 @@ namespace JukaCompiler.Interpreter
             scopes.Peek().Add("this", true);
             processScope.Add("this", blockScope);
 
-            for (int i = 0; i < stmt.methods.Count; i++)
+            foreach (Stmt.Function method in stmt.methods)
             {
-                Statement.Function method = stmt.methods[i];
                 //FunctionType decl = FunctionType.METHOD;
                 //implement ctor
                 // if(method.ExpressionLexeme.ToString
@@ -171,22 +163,22 @@ namespace JukaCompiler.Interpreter
             }
 
             EndScope();
-            if(stmt.superClass != null)
+            if (stmt.superClass != null)
             {
                 EndScope();
             }
 
             currentClass = enclosingClass;
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
-        public object VisitExpressionStmt(Statement.Expression stmt)
+        public object VisitExpressionStmt(Stmt.Expression stmt)
         {
             Resolve(stmt.Expr);
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
-        public object VisitFunctionStmt(Statement.Function stmt)
+        public object VisitFunctionStmt(Stmt.Function stmt)
         {
             BeginScope(stmt.StmtLexemeName);
 
@@ -196,32 +188,32 @@ namespace JukaCompiler.Interpreter
             ResolveFunction(stmt, FunctionType.FUNCTION);
 
             EndScope();
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitLexemeTypeLiteral(Expr.LexemeTypeLiteral expr)
         {
-            return new Statement.DefaultStatement(); 
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitGetExpr(Expr.Get expr)
         {
             Resolve(expr.expr);
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitGroupingExpr(Expr.Grouping expr)
         {
             if (expr == null || expr.expression == null)
             {
-                throw new ArgumentNullException("Grouping has some null stuff");
+                throw new ArgumentNullException("grouping has some null stuff");
             }
 
             Resolve(expr.expression);
             return new Expr.Grouping();
         }
 
-        public object VisitIfStmt(Statement.If stmt)
+        public object VisitIfStmt(Stmt.If stmt)
         {
             Resolve(stmt.condition);
             Resolve(stmt.thenBranch);
@@ -231,12 +223,11 @@ namespace JukaCompiler.Interpreter
                 Resolve(stmt.elseBranch);
             }
 
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitLiteralExpr(Expr.Literal expr)
         {
-         
             return new Expr.Literal();
         }
 
@@ -245,7 +236,7 @@ namespace JukaCompiler.Interpreter
             throw new NotImplementedException("Resolver VisitLogicalExpr is not implemented");
         }
 
-        public object VisitPrintLine(Statement.PrintLine stmt)
+        public object VisitPrintLine(Stmt.PrintLine stmt)
         {
             if (stmt == null || stmt.expr == null)
             {
@@ -253,10 +244,10 @@ namespace JukaCompiler.Interpreter
             }
 
             Resolve(stmt.expr);
-            return new Statement.PrintLine();
+            return new Stmt.PrintLine();
         }
 
-        public object VisitPrint(Statement.Print stmt)
+        public object VisitPrint(Stmt.Print stmt)
         {
             if (stmt == null || stmt.expr == null)
             {
@@ -264,10 +255,10 @@ namespace JukaCompiler.Interpreter
             }
 
             Resolve(stmt.expr);
-            return new Statement.Print();
+            return new Stmt.Print();
         }
 
-        public object VisitReturnStmt(Statement.Return stmt)
+        public object VisitReturnStmt(Stmt.Return stmt)
         {
             if (currentFunction == FunctionType.NONE)
             {
@@ -284,38 +275,38 @@ namespace JukaCompiler.Interpreter
                 Resolve(stmt.expr);
             }
 
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
-        public object VisitBreakStmt(Statement.Break stmt)
+        public object VisitBreakStmt(Stmt.Break stmt)
         {
-            Statement.Return returnStatement = new();
+            Stmt.Return returnStatement = new Stmt.Return();
             return VisitReturnStmt(returnStatement);
         }
 
-        public object VisitForStmt(Statement.For stmt)
+        public object VisitForStmt(Stmt.For stmt)
         {
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitArrayExpr(Expr.ArrayDeclarationExpr expr)
         {
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitNewExpr(NewDeclarationExpr expr)
         {
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitArrayAccessExpr(ArrayAccessExpr expr)
         {
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitDeleteExpr(DeleteDeclarationExpr expr)
         {
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         public object VisitSetExpr(Expr.Set expr)
@@ -344,39 +335,39 @@ namespace JukaCompiler.Interpreter
             {
                 // the expr is a call to a function. 
                 string currentScope = this.blockScope.Peek();
-                
-                if(processScope.TryGetValue(currentScope, out var localScope))
+
+                if (processScope.TryGetValue(currentScope, out var localScope))
                 {
-                    if(localScope != null && localScope.lexemeScope.TryGetValue(expr.ExpressionLexeme!.ToString(), out var value))
+                    if (localScope != null && localScope.lexemeScope.TryGetValue(expr.ExpressionLexeme!.ToString(), out var value))
                     {
-                        this.interpreter.Resolve(expr,0);
+                        this.interpreter.Resolve(expr, 0);
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 this.compilerError?.AddError(ex.Message);
             }
 
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         private void ResolveLocal(Expr expr, Lexeme name)
         {
-            for (int i = scopes.Count -1; i >= 0; i--)
+            for (int i = scopes.Count - 1; i >= 0; i--)
             {
                 if (scopes.Peek().ContainsKey(name.ToString()))
                 {
-                    this.interpreter.Resolve(expr, scopes.Count - 1 - i);
+                    this.interpreter.Resolve(expr, scopes.Count() - 1 - i);
                 }
             }
         }
 
-        public object VisitVarStmt(Statement.Var stmt)
+        public object VisitVarStmt(Stmt.Var stmt)
         {
             if (stmt == null || stmt.name == null)
             {
-                throw new ArgumentNullException("new vist stmt == null"+stmt);
+                throw new ArgumentNullException("new vist stmt == null");
             }
 
             Declare(stmt.name);
@@ -387,35 +378,35 @@ namespace JukaCompiler.Interpreter
             }
 
             Define(stmt.name);
-            return new Statement.Var();
+            return new Stmt.Var();
         }
 
-        public object VisitWhileStmt(Statement.While stmt)
+        public object VisitWhileStmt(Stmt.While stmt)
         {
             Resolve(stmt.condition);
             Resolve(stmt.whileBlock);
 
-            return new Statement.DefaultStatement();
+            return new Stmt.DefaultStatement();
         }
 
         private void Declare(Lexeme name)
         {
             if (blockScope != null && blockScope.Count > 0)
             {
-                string block = blockScope.Peek();
+                var block = blockScope.Peek();
                 if (block.Equals(name.ToString()))
                 {
                     // current context is a function
                     return;
                 }
 
-                if(this.processScope.TryGetValue(block, out BlockScope? bsLocal))
+                if (this.processScope.TryGetValue(block, out BlockScope? bsLocal))
                 {
                     bsLocal?.lexemeScope.Add(name.ToString(), name);
                     return;
                 }
 
-                BlockScope bsObject = new();
+                BlockScope? bsObject = new BlockScope();
                 if (bsObject.lexemeScope.ContainsKey(name.ToString()))
                 {
                     throw new Exception("variable already exist");
@@ -428,11 +419,11 @@ namespace JukaCompiler.Interpreter
 
         private void Define(Lexeme name)
         {
-            if (scopes.Count == 0 || (scopes.Peek().Count == 0))
+            if (!scopes.Any() || (scopes.Peek().Count == 0))
             {
                 return;
             }
-            
+
             if (scopes.Peek().ContainsKey(name.ToString()))
             {
                 scopes.Peek()[name.ToString()] = true;
@@ -443,14 +434,19 @@ namespace JukaCompiler.Interpreter
             }
         }
 
-        private void ResolveFunction(Statement.Function function, FunctionType type)
+        private void ResolveFunction(Stmt.Function function, FunctionType type)
         {
             FunctionType enclosingFunction = currentFunction;
             currentFunction = type;
 
             foreach (var param in function.typeParameterMaps)
             {
-                Variable literalName = param.parameterName as Expr.Variable ?? throw new Exception("Something went wrong when resolving the function");
+                var literalName = param.parameterName as Expr.Variable;
+                if (literalName == null)
+                {
+                    throw new Exception("Something went wrong when resolving the function");
+                }
+
                 if (literalName.ExpressionLexeme != null)
                 {
                     Declare(literalName.ExpressionLexeme);
@@ -462,16 +458,13 @@ namespace JukaCompiler.Interpreter
                 }
             }
 
-            if (function != null && function.body != null)
-            {
-                Resolve(function.body);
-            }
+            Resolve(function.body);
             currentFunction = enclosingFunction;
         }
 
         private void BeginScope(string scopeName)
         {
-            scopes.Push([]);
+            scopes.Push(new Dictionary<string, bool>());
             blockScope.Push(scopeName);
         }
 
@@ -484,12 +477,7 @@ namespace JukaCompiler.Interpreter
 
     internal class BlockScope
     {
-        internal Dictionary<string, Dictionary<string, Expr>> processScope = [];
-        internal Dictionary<string, Lexeme> lexemeScope = [];
-
-        public static implicit operator BlockScope?(string? v)
-        {
-            throw new NotImplementedException();
-        }
+        internal Dictionary<string, Dictionary<string, Expr>> processScope = new();
+        internal Dictionary<string, Lexeme> lexemeScope = new();
     }
 }

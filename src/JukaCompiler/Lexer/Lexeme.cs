@@ -38,7 +38,7 @@ namespace JukaCompiler.Lexer
             CLASS,
             ELSE,
             FALSE,
-            FUNC,
+            SUB,
             FOR,
             IF,
             NULL,

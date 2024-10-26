@@ -21,7 +21,7 @@ namespace JukaCompiler.Scan
             { "and",    LexemeType.Types.AND },
             { "class",  LexemeType.Types.CLASS },
             { "else",   LexemeType.Types.ELSE },
-            { "func",   LexemeType.Types.FUNC },
+            { "sub",   LexemeType.Types.SUB },
             { "for",    LexemeType.Types.FOR },
             { "if",     LexemeType.Types.IF },
             { "null",   LexemeType.Types.NULL },

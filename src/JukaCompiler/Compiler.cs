@@ -133,7 +133,7 @@ namespace JukaCompiler
             var provider = this.serviceProvider;
             if (provider != null)
             {
-                return provider.GetRequiredService<ICompilerError>().ListErrors();
+                return provider.GetRequiredService<ICompilerError>().ListErrors;
             }
 
             throw new JRuntimeException("unable to initialize provider for errors");

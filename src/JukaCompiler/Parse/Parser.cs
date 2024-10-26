@@ -89,9 +89,9 @@ namespace JukaCompiler.Parse
             }
 
 
-            if (Match(LexemeType.Types.FUNC))
+            if (Match(LexemeType.Types.SUB))
             {
-                return Function("func");
+                return Function("sub");
             }
 
             if (MatchKeyWord())
@@ -419,7 +419,7 @@ namespace JukaCompiler.Parse
                         break;
                     }
 
-                    if (isFunc.LexemeType == LexemeType.Types.FUNC)
+                    if (isFunc.LexemeType == LexemeType.Types.SUB)
                     {
                         functions.Add((Stmt.Function)Declaration());
                     }

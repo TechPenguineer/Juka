@@ -11,7 +11,7 @@
         void ICompilerError.AddError(string errorMessage)
         {
 
-            Errors.Add(errorMessage + " in Source File"+this.sourceFileName);
+            Errors.Add(errorMessage + " in Source: "+this.sourceFileName);
             System.Diagnostics.Debugger.Break();
         }
 

@@ -20,7 +20,6 @@
         Switch,
         While,
         Debugger,
-        Func,
         Sub,
         This,
         With,
@@ -60,7 +59,6 @@
         public const string SWITCH = "switch";
         public const string WHILE = "while";
         public const string DEBUGGER = "debugger";
-        public const string FUNC = "func";
         public const string SUB = "sub";
         public const string THIS = "this";
         public const string WITH = "with";
@@ -102,7 +100,7 @@
             {"switch"},
             {"while"},
             {"debugger"},
-            {"function"},
+            {"sub"},
             {"subroutine"},
             {"this"},
             {"with"},
@@ -144,7 +142,6 @@
             { "switch",     KeyWordsEnum.Switch },       
             { "while",      KeyWordsEnum.While },        
             { "debugger",   KeyWordsEnum.Debugger },     
-            { "func",       KeyWordsEnum.Func },
             { "sub",       KeyWordsEnum.Sub },
             { "this",       KeyWordsEnum.This },         
             { "with",       KeyWordsEnum.With },         

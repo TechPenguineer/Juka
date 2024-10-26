@@ -33,17 +33,17 @@ namespace JukaCompiler.SystemCalls
 
             using (Process proc = Process.GetCurrentProcess())
             {
-                memory = Math.Round((decimal)proc.PrivateMemorySize64 / (1024 * 1024), 2);
+                memory = Math.Round((decimal)proc.PrivateMemorySize64 / (1024), 6);
 
                 if (memory == 0 && RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
                 {
-                    memory = Math.Round((decimal)proc.VirtualMemorySize64 / (1024 * 1024), 2);
+                    memory = Math.Round((decimal)proc.VirtualMemorySize64 / (1024), 6);
                 }
             }
 
             Expr.LexemeTypeLiteral lexemeTypeLiteral = new()
             {
-                literal = memory
+                literal = memory + " MB"
             };
             return lexemeTypeLiteral;
         }
