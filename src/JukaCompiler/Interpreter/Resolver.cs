@@ -7,7 +7,7 @@ using static JukaCompiler.Expressions.Expr;
 
 namespace JukaCompiler.Interpreter
 {
-    internal class Resolver : Stmt.IVisitor<object>, Expr.IVisitor<object>
+    internal class Resolver : Statement.IVisitor<object>, Expr.IVisitor<object>
     {
         private JukaInterpreter interpreter;
         private FunctionType currentFunction = FunctionType.NONE;
@@ -45,15 +45,15 @@ namespace JukaCompiler.Interpreter
             }
         }
 
-        internal void Resolve(List<Stmt> statements)
+        internal void Resolve(List<Statement> statements)
         {
-            foreach (Stmt stmt in statements)
+            foreach (Statement stmt in statements)
             {
                 Resolve(stmt);
             }
         }
 
-        private void Resolve(Stmt stmt)
+        private void Resolve(Statement stmt)
         {
             stmt.Accept(this);
         }
@@ -79,7 +79,7 @@ namespace JukaCompiler.Interpreter
                     //var xx= interpreter.LookUpVariable(lexeme, expr);
                 }
             }
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitBinaryExpr(Expr.Binary expr)
@@ -92,12 +92,12 @@ namespace JukaCompiler.Interpreter
             return new Expr.Binary();
         }
 
-        public object VisitBlockStmt(Stmt.Block stmt)
+        public object VisitBlockStmt(Statement.Block stmt)
         {
             //BeginScope(stmt.);
             Resolve(stmt.statements);
             //EndScope();
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitCallExpr(Expr.Call expr)
@@ -118,10 +118,10 @@ namespace JukaCompiler.Interpreter
                 }
                 EndScope();
             }
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
-        public object VisitClassStmt(Stmt.Class stmt)
+        public object VisitClassStmt(Statement.Class stmt)
         {
             ClassType enclosingClass = currentClass;
             currentClass = ClassType.CLASS;
@@ -153,7 +153,7 @@ namespace JukaCompiler.Interpreter
             scopes.Peek().Add("this", true);
             processScope.Add("this", blockScope);
 
-            foreach (Stmt.Function method in stmt.methods)
+            foreach (Statement.Function method in stmt.methods)
             {
                 //FunctionType decl = FunctionType.METHOD;
                 //implement ctor
@@ -169,16 +169,16 @@ namespace JukaCompiler.Interpreter
             }
 
             currentClass = enclosingClass;
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
-        public object VisitExpressionStmt(Stmt.Expression stmt)
+        public object VisitExpressionStmt(Statement.Expression stmt)
         {
             Resolve(stmt.Expr);
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
-        public object VisitFunctionStmt(Stmt.Function stmt)
+        public object VisitFunctionStmt(Statement.Function stmt)
         {
             BeginScope(stmt.StmtLexemeName);
 
@@ -188,18 +188,18 @@ namespace JukaCompiler.Interpreter
             ResolveFunction(stmt, FunctionType.FUNCTION);
 
             EndScope();
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitLexemeTypeLiteral(Expr.LexemeTypeLiteral expr)
         {
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitGetExpr(Expr.Get expr)
         {
             Resolve(expr.expr);
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitGroupingExpr(Expr.Grouping expr)
@@ -213,7 +213,7 @@ namespace JukaCompiler.Interpreter
             return new Expr.Grouping();
         }
 
-        public object VisitIfStmt(Stmt.If stmt)
+        public object VisitIfStmt(Statement.If stmt)
         {
             Resolve(stmt.condition);
             Resolve(stmt.thenBranch);
@@ -223,7 +223,7 @@ namespace JukaCompiler.Interpreter
                 Resolve(stmt.elseBranch);
             }
 
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitLiteralExpr(Expr.Literal expr)
@@ -236,7 +236,7 @@ namespace JukaCompiler.Interpreter
             throw new NotImplementedException("Resolver VisitLogicalExpr is not implemented");
         }
 
-        public object VisitPrintLine(Stmt.PrintLine stmt)
+        public object VisitPrintLine(Statement.PrintLine stmt)
         {
             if (stmt == null || stmt.expr == null)
             {
@@ -244,10 +244,10 @@ namespace JukaCompiler.Interpreter
             }
 
             Resolve(stmt.expr);
-            return new Stmt.PrintLine();
+            return new Statement.PrintLine();
         }
 
-        public object VisitPrint(Stmt.Print stmt)
+        public object VisitPrint(Statement.Print stmt)
         {
             if (stmt == null || stmt.expr == null)
             {
@@ -255,10 +255,10 @@ namespace JukaCompiler.Interpreter
             }
 
             Resolve(stmt.expr);
-            return new Stmt.Print();
+            return new Statement.Print();
         }
 
-        public object VisitReturnStmt(Stmt.Return stmt)
+        public object VisitReturnStmt(Statement.Return stmt)
         {
             if (currentFunction == FunctionType.NONE)
             {
@@ -275,38 +275,38 @@ namespace JukaCompiler.Interpreter
                 Resolve(stmt.expr);
             }
 
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
-        public object VisitBreakStmt(Stmt.Break stmt)
+        public object VisitBreakStmt(Statement.Break stmt)
         {
-            Stmt.Return returnStatement = new Stmt.Return();
+            Statement.Return returnStatement = new Statement.Return();
             return VisitReturnStmt(returnStatement);
         }
 
-        public object VisitForStmt(Stmt.For stmt)
+        public object VisitForStmt(Statement.For stmt)
         {
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitArrayExpr(Expr.ArrayDeclarationExpr expr)
         {
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitNewExpr(NewDeclarationExpr expr)
         {
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitArrayAccessExpr(ArrayAccessExpr expr)
         {
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitDeleteExpr(DeleteDeclarationExpr expr)
         {
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         public object VisitSetExpr(Expr.Set expr)
@@ -349,7 +349,7 @@ namespace JukaCompiler.Interpreter
                 this.compilerError?.AddError(ex.Message);
             }
 
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         private void ResolveLocal(Expr expr, Lexeme name)
@@ -363,7 +363,7 @@ namespace JukaCompiler.Interpreter
             }
         }
 
-        public object VisitVarStmt(Stmt.Var stmt)
+        public object VisitVarStmt(Statement.Var stmt)
         {
             if (stmt == null || stmt.name == null)
             {
@@ -378,15 +378,15 @@ namespace JukaCompiler.Interpreter
             }
 
             Define(stmt.name);
-            return new Stmt.Var();
+            return new Statement.Var();
         }
 
-        public object VisitWhileStmt(Stmt.While stmt)
+        public object VisitWhileStmt(Statement.While stmt)
         {
             Resolve(stmt.condition);
             Resolve(stmt.whileBlock);
 
-            return new Stmt.DefaultStatement();
+            return new Statement.DefaultStatement();
         }
 
         private void Declare(Lexeme name)
@@ -434,7 +434,7 @@ namespace JukaCompiler.Interpreter
             }
         }
 
-        private void ResolveFunction(Stmt.Function function, FunctionType type)
+        private void ResolveFunction(Statement.Function function, FunctionType type)
         {
             FunctionType enclosingFunction = currentFunction;
             currentFunction = type;

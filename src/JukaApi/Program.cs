@@ -76,9 +76,9 @@ static IResult ExecuteCode(string code)
     string decoded = Uri.UnescapeDataString(code);
     string outputValue = compiler.CompileJukaCode(decoded, isFile: false);
 
-    if (compiler.CheckForErrors())
+    if (compiler.HasErrors())
     {
-        string errors = string.Join(Environment.NewLine, compiler.GetErrorList());
+        string errors = string.Join(Environment.NewLine, compiler.ListErrors());
         return Results.Ok(new { errors, original = decoded });
     }
 

@@ -51,7 +51,7 @@ namespace JukaCompiler
                     provider.GetRequiredService<ICompilerError>().SourceFileName(data);
 
                     Parser parser = new(new Scanner(data, provider, isFile), provider);
-                    List<Stmt> statements = parser.Parse();
+                    List<Statement> statements = parser.Parse();
 
                     return Compile(statements);
                 }
@@ -64,7 +64,7 @@ namespace JukaCompiler
             throw new Exception("unhandled errors");
         }
 
-        private string Compile(List<Stmt> statements)
+        private string Compile(List<Statement> statements)
         {
             if (serviceProvider != null)
             {
@@ -96,13 +96,13 @@ namespace JukaCompiler
             throw new JRuntimeException("Service provider is not created");
         }
 
-        private static void SetupMainMethodRuntimeHook(List<Stmt> statements, Resolver resolver)
+        private static void SetupMainMethodRuntimeHook(List<Statement> statements, Resolver resolver)
         {
-            var allFunctions = statements.Where(e => e is Stmt.Function == true).ToList();
+            var allFunctions = statements.Where(e => e is Statement.Function == true).ToList();
 
             foreach (var m in allFunctions)
             {
-                if (((Stmt.Function)m).StmtLexemeName.Equals("main"))
+                if (((Statement.Function)m).StmtLexemeName.Equals("main"))
                 {
                     break;
                 }
@@ -118,8 +118,8 @@ namespace JukaCompiler
             lexeme.AddToken("main");
             Expr.Variable functionName = new(lexeme);
             Expr.Call call = new(functionName, false, new List<Expr>());
-            Stmt.Expression expression = new(call);
-            resolver.Resolve(new List<Stmt>() { expression });
+            Statement.Expression expression = new(call);
+            resolver.Resolve(new List<Statement>() { expression });
         }
 
         public bool HasErrors()

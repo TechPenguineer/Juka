@@ -6,11 +6,11 @@ namespace JukaCompiler.Interpreter
 {
     internal class JukaFunction : IJukaCallable
     {
-        private Stmt.Function? declaration;
+        private Statement.Function? declaration;
         private JukaEnvironment? closure;
         private bool isInitializer;
 
-        internal JukaFunction(Stmt.Function declaration, JukaEnvironment closure, bool isInitializer)
+        internal JukaFunction(Statement.Function declaration, JukaEnvironment closure, bool isInitializer)
         {
             this.isInitializer = isInitializer;
             this.declaration = declaration;
@@ -33,7 +33,7 @@ namespace JukaCompiler.Interpreter
             throw new JRuntimeException("Unable to bind");
         }
 
-        internal Stmt.Function? Declaration => declaration;
+        internal Statement.Function? Declaration => declaration;
 
         internal JukaEnvironment? Closure => closure;
 
