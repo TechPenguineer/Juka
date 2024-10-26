@@ -13,7 +13,7 @@ namespace JukaCompiler
 {
     /// <summary>
     /// Represents the Compiler class which is responsible for compiling Juka code.
-    /// </summary>
+    /// </summary> 
     public class Compiler
     {
         private ServiceProvider _serviceProvider;
@@ -28,6 +28,8 @@ namespace JukaCompiler
             _hostBuilder = new HostBuilder();
             _hostBuilder.ConfigureServices(services =>
             {
+                ArgumentNullException.ThrowIfNull(services);
+
                 services.AddSingleton<ICompilerError, CompilerError>();
                 services.AddSingleton<IJukaCallable, JukaSystemCalls>();
                 services.AddSingleton<IFileOpener, FileOpen>();
@@ -133,7 +135,7 @@ namespace JukaCompiler
         {
             if (_serviceProvider == null)
             {
-                throw new JRuntimeException("Service provider is not created");
+                throw new Exception("Service provider is not created");
             }
         }
     }

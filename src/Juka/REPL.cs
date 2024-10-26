@@ -3,6 +3,7 @@ using JukaCompiler;
 using Spectre.Console;
 using System.Diagnostics;
 using System.Text;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 namespace Juka
@@ -309,9 +310,13 @@ namespace Juka
        // Displays the code present in the subRoutineStack in reverse order and then calls the DisplayPrompt method.
         private static void ListCode()
         {
+            if (subRoutineStack.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[yellow]There are no commands to run.[/]");
+            }
             foreach (string? data in subRoutineStack.Reverse())
             {
-                Console.WriteLine(data);
+                AnsiConsole.WriteLine(data);
             }
 
         }
@@ -331,8 +336,17 @@ namespace Juka
                 }
                 AnsiConsole.MarkupLine($"Name: {package.Name}");
                 AnsiConsole.MarkupLine($"Author: {package.Author}");
+                AnsiConsole.MarkupLine($"Version: {package.Author}");
                 AnsiConsole.MarkupLine($"Description: {package.Description}");
                 AnsiConsole.MarkupLine($"Date: {package.Date}");
+                AnsiConsole.MarkupLine($"Dependencies: {package.Dependencies}");
+                if (DebugMe.DebugMode == 1) {
+                    AnsiConsole.MarkupLine($"-----------------------------");
+                    AnsiConsole.MarkupLine($"MainFileName: {package.Date}");
+                    AnsiConsole.MarkupLine($"DownloadUrl: {package.DownloadUrl}");
+                    AnsiConsole.MarkupLine($"Devices: {package.Devices}");
+
+                }
             }
         }
 
@@ -377,7 +391,6 @@ namespace Juka
         private static async Task DownloadAFile(string url)
         {
             await SelfUpdate.DownloadURLAsync(url);
-            AnsiConsole.MarkupLine("[Green]Finished Downloading from: [/]" + url);
         }
 
         

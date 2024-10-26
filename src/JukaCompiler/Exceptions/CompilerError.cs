@@ -10,7 +10,8 @@
         }
         void ICompilerError.AddError(string errorMessage)
         {
-            Errors.Add(errorMessage);
+
+            Errors.Add(errorMessage + " in Source File"+this.sourceFileName);
             System.Diagnostics.Debugger.Break();
         }
 

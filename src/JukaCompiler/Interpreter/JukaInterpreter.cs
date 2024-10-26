@@ -23,16 +23,16 @@ namespace JukaCompiler.Interpreter
         internal JukaInterpreter(ServiceProvider services)
         {
             environment = globals = new();
-            serviceProvider = services;
+            this.serviceProvider = services;
 
-            if (serviceProvider == null)
+            if (this.serviceProvider == null)
             {
                 throw new ArgumentNullException(nameof(services));
             }
-            globals.Define("CSharp", serviceProvider.GetService<ICSharp>());
-            globals.Define("Clock", serviceProvider.GetService<ISystemClock>());
-            globals.Define("FileOpen", services.GetService<IFileOpener>());
-            globals.Define("GetAvailableMemory", services.GetService<IGetAvailableMemory>());
+            globals.Define("CSharp", this.serviceProvider.GetService<ICSharp>());
+            globals.Define("Clock", this.serviceProvider.GetService<ISystemClock>());
+            globals.Define("FileOpen", this.serviceProvider.GetService<IFileOpener>());
+            globals.Define("GetAvailableMemory", this.serviceProvider.GetService<IGetAvailableMemory>());
         }
 
         internal void Interpret(List<Statement> statements)

@@ -71,18 +71,32 @@ class SelfUpdate
 
     public static async Task DownloadURLAsync(string url)
     {
-        AnsiConsole.MarkupLine("[yellow]Downloading from [/]" + url);
-        using HttpResponseMessage? response2 = await new HttpClient().GetAsync(url);
-        await using Stream? streamToReadFrom = await response2.Content.ReadAsStreamAsync();
+        try
+        {
+            using HttpResponseMessage? response2 = await new HttpClient().GetAsync(url);
+            await using Stream? streamToReadFrom = await response2.Content.ReadAsStreamAsync();
+            AnsiConsole.MarkupLine("[yellow]Downloading from [/]" + url);
 
+            Uri uri = new(url);
+            string fileName = Path.GetFileName(uri.LocalPath);
 
-        Uri uri = new(url);
-        string fileName = Path.GetFileName(uri.LocalPath);
+            using FileStream fileStream = File.Create(fileName);
+            streamToReadFrom.CopyTo(fileStream);
 
-
-        using FileStream fileStream = File.Create(fileName);
-        streamToReadFrom.CopyTo(fileStream);
-
+            AnsiConsole.MarkupLine("[Green]Finished Downloading from: [/]" + url);
+        }
+        catch (InvalidOperationException ex)
+        {
+            AnsiConsole.MarkupLine("[red]Invalid URL:[/] "+ url);
+        }
+        catch(HttpRequestException ex)
+        {
+            AnsiConsole.MarkupLine("[red]Cannot connect to the URL[/] " + url);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"{ex.Message}");
+        }
     }
 
 

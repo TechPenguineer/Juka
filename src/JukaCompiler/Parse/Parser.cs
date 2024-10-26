@@ -22,9 +22,9 @@ namespace JukaCompiler.Parse
         internal Parser(Scanner scanner, ServiceProvider services)
         {
             this.scanner = scanner;
-            Services = services;
+            this.Services = services;
 
-            compilerError = services.GetRequiredService<ICompilerError>();
+            this.compilerError = services.GetRequiredService<ICompilerError>();
         }
 
         internal List<Statement> Parse()
@@ -206,7 +206,7 @@ namespace JukaCompiler.Parse
             {
                 Statement.Var initCondition = VariableDeclaration();
 
-                Binary breakCondition = (Binary)Equality();
+                Expr.Binary breakCondition = (Expr.Binary)Equality();
                 Consume(LexemeType.Types.SEMICOLON, Previous());
 
                 Expr incrementCondition = Unary();
@@ -407,7 +407,7 @@ namespace JukaCompiler.Parse
 
             List<Statement> statements = Block();
 
-            Consume(LexemeType.Types.RIGHT_BRACE, Peek());
+            //Consume(LexemeType.Types.RIGHT_BRACE, Peek());
             Statement.Function stmt = new(name, typeMap, statements);
             return stmt;
         }

@@ -20,7 +20,7 @@ namespace JukaCompiler.Interpreter
     {
         private JukaEnvironment? enclosing;
         private Dictionary<string, object?> values = [];
-        
+
         internal JukaEnvironment()
         {
             enclosing = null;
