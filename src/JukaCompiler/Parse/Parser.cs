@@ -613,6 +613,17 @@ namespace JukaCompiler.Parse
         {
             // Expr expr = Array();
 
+            //DEADBEEF
+            if (Match(LexemeType.Types.MINUS))
+            {
+                var t = Previous();
+                var x = Peek(0);
+                var y = Peek();
+                var z = Peek(1);
+                return new Expr.Literal(Peek(), LexemeType.Types.NUMBER);
+            }
+
+
             if (Match(LexemeType.Types.BANG))
             {
                 Lexeme op = Previous();
@@ -654,6 +665,8 @@ namespace JukaCompiler.Parse
                     return new Expr.Unary(idLexeme, LexemeType.Types.PLUSPLUS);
                 }
             }
+
+
 
             return Call();
         }
@@ -741,20 +754,6 @@ namespace JukaCompiler.Parse
             {
                 return Assignment();
             }
-
-            if (Match(LexemeType.Types.MINUS))
-            {
-                var numb = Consume(LexemeType.Types.NUMBER,Previous());
-                //var numb = Consume(LexemeType.Types.NUMBER, Peek());
-                /*var size = Consume(LexemeType.Types.NUMBER, Peek());
-                Consume(LexemeType.Types.RIGHT_BRACE, Peek());
-                var name = new Lexeme(LexemeType.Types.ARRAY, 0, 0);
-                name.AddToken("array");
-                return new Expr.ArrayDeclarationExpr(name, size);*/
-                return new Expr.Literal(numb, LexemeType.Types.NUMBER);
-            }
-
-
 
             throw new Exception(Peek() + "Expect expr");
         }

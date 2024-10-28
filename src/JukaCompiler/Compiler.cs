@@ -58,7 +58,8 @@ namespace JukaCompiler
             }
             catch (Exception ex)
             {
-                return $"Error compiling {ex.Message}";
+                throw new Exception("Unhandled Errors: " +ex.Message);
+                //return $"Error compiling {ex.Message}";
             }
 
             throw new Exception("unhandled errors");
